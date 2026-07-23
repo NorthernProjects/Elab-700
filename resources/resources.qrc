@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/theme">
+        <file alias="dark.qss">style_dark.qss</file>
+        <file alias="light.qss">style_light.qss</file>
+    </qresource>
+    <qresource prefix="/branding">
+        <file alias="logo.png">logo_ruelle_avenir.png</file>
+        <file alias="logo_no_tagline.png">logo_no_tagline.png</file>
+        <file alias="icon.png">logo_icon.png</file>
+    </qresource>
+</RCC>

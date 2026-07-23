@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>@ELAB_BUNDLE_EXECUTABLE@</string>
+    <key>CFBundleIconFile</key>
+    <string>@ELAB_BUNDLE_ICON_FILE@</string>
+    <key>CFBundleIdentifier</key>
+    <string>@ELAB_BUNDLE_IDENTIFIER@</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>@ELAB_BUNDLE_NAME@</string>
+    <key>CFBundleDisplayName</key>
+    <string>@ELAB_BUNDLE_NAME@</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>@ELAB_BUNDLE_VERSION@</string>
+    <key>CFBundleVersion</key>
+    <string>@ELAB_BUNDLE_VERSION@</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>@ELAB_OSX_DEPLOYMENT_TARGET@</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSCameraUsageDescription</key>
+    <string>E-Lab 700 a besoin d'accéder à la caméra du microscope pour afficher et enregistrer les images.</string>
+</dict>
+</plist>

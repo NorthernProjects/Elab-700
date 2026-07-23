@@ -1,0 +1,346 @@
+/* E-Lab 700 — dark, futuristic theme tuned for touch and classroom use */
+
+* {
+    font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    color: #e6f7ff;
+}
+
+QMainWindow, QDialog {
+    background-color: #05070a;
+}
+
+#TopStatusBar {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #10192a, stop:1 #0a0f18);
+    border-bottom: 1px solid #1c3a4a;
+}
+
+#microscopeInfoPanel {
+    background-color: #0e1622;
+    border: 1px solid #22384d;
+    border-radius: 14px;
+}
+
+#microscopeInfoTitle {
+    font-size: 16px;
+    font-weight: bold;
+    color: #5ce1e6;
+}
+
+#microscopeInfoSubtitle {
+    font-size: 11px;
+    color: #7c9bb5;
+}
+
+#microscopeInfoSection {
+    font-size: 12px;
+    color: #b7d4e8;
+}
+
+#microscopeInfoLabel {
+    font-size: 12px;
+    color: #7c9bb5;
+}
+
+#microscopeInfoValue {
+    font-size: 12px;
+    font-weight: bold;
+    color: #e6f7ff;
+}
+
+#microscopeInfoClose {
+    background: transparent;
+    border: none;
+    color: #7c9bb5;
+    font-weight: bold;
+}
+
+#microscopeInfoClose:hover {
+    color: #ff5c6c;
+}
+
+#TopStatusBar QLabel {
+    font-size: 13px;
+    color: #8fb8d6;
+}
+
+#logoLabel {
+    padding-right: 4px;
+}
+
+#connectionLabel {
+    background: transparent;
+    border: none;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+#connectionLabel:hover {
+    background-color: #16202c;
+}
+
+#connectionLabel[connected="true"] {
+    color: #35e08a;
+    font-weight: bold;
+}
+
+#connectionLabel[connected="false"] {
+    color: #ff5c6c;
+    font-weight: bold;
+}
+
+#microscopeLabel {
+    background: transparent;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 10px;
+    color: #4d6a82;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+#microscopeLabel:hover {
+    background-color: #16202c;
+    color: #5ce1e6;
+}
+
+#resolutionLabel {
+    background: transparent;
+    border: none;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #8fb8d6;
+}
+
+#resolutionLabel:hover {
+    background-color: #16202c;
+    color: #5ce1e6;
+}
+
+#groupButton {
+    background: transparent;
+    border: 1px solid #22384d;
+    border-radius: 14px;
+    padding: 4px 14px;
+    color: #5ce1e6;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+#groupButton:hover {
+    background-color: #16202c;
+    border-color: #5ce1e6;
+}
+
+#teacherButton {
+    background-color: transparent;
+    border: 1px solid #22384d;
+    border-radius: 18px;
+    font-size: 16px;
+    color: #4d6a82;
+}
+
+#teacherButton:hover {
+    background-color: #16202c;
+    border-color: #5ce1e6;
+    color: #5ce1e6;
+}
+
+#BottomBar {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #0a0f18, stop:1 #10192a);
+    border-top: 1px solid #1c3a4a;
+}
+
+QPushButton {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #182636, stop:1 #101a26);
+    border: 1px solid #274363;
+    border-radius: 14px;
+    padding: 6px;
+}
+
+QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #21384f, stop:1 #16283a);
+    border-color: #5ce1e6;
+    color: #eafeff;
+}
+
+QPushButton:pressed {
+    background: #0d1620;
+    border-color: #35e0e6;
+}
+
+#videoButton[recording="true"] {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #4a1622, stop:1 #2c0f18);
+    border-color: #ff5c6c;
+    color: #ff8a94;
+}
+
+#zoomInButton, #zoomOutButton {
+    border-radius: 22px;
+    font-size: 18px;
+}
+
+#zoomLabel {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #8fb8d6;
+}
+
+#zoomLabel:hover {
+    background-color: #16202c;
+    color: #5ce1e6;
+}
+
+QGroupBox {
+    border: 1px solid #22384d;
+    border-radius: 10px;
+    margin-top: 12px;
+    padding-top: 12px;
+    font-weight: bold;
+    color: #5ce1e6;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0 6px;
+}
+
+QSlider::groove:horizontal {
+    height: 6px;
+    background: #1c2a3a;
+    border-radius: 3px;
+}
+
+QSlider::sub-page:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #2a8f95, stop:1 #5ce1e6);
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    background: #5ce1e6;
+    width: 18px;
+    height: 18px;
+    margin: -6px 0;
+    border-radius: 9px;
+    border: 2px solid #0a0f18;
+}
+
+QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox {
+    background-color: #0a0f18;
+    border: 1px solid #22384d;
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #e6f7ff;
+    selection-background-color: #2a5570;
+}
+
+QComboBox:focus, QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+    border-color: #5ce1e6;
+}
+
+/* Explicit sizing for the up/down arrows: once any QSS applies to a
+   QAbstractSpinBox, Qt stops using the native button layout for its
+   subcontrols too, and an unstated width could end up eating into the
+   number's own display area rather than sitting cleanly beside it. */
+QSpinBox::up-button, QSpinBox::down-button,
+QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+    width: 18px;
+    background: transparent;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #0a0f18;
+    border: 1px solid #22384d;
+    color: #e6f7ff;
+    selection-background-color: #2a5570;
+}
+
+QMenu {
+    background-color: #0e1622;
+    border: 1px solid #22384d;
+    color: #e6f7ff;
+    padding: 4px;
+}
+
+QMenu::item {
+    padding: 6px 24px 6px 12px;
+    border-radius: 4px;
+    color: #e6f7ff;
+}
+
+QMenu::item:selected {
+    background-color: #1c3a4a;
+    color: #5ce1e6;
+}
+
+QMenu::item:disabled {
+    color: #4d6a82;
+}
+
+QMenu::separator {
+    height: 1px;
+    background: #22384d;
+    margin: 4px 8px;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+}
+
+QListWidget {
+    background-color: #0a0f18;
+    border: 1px solid #22384d;
+    border-radius: 8px;
+}
+
+QListWidget::item:selected {
+    background-color: #1c3a4a;
+    border-radius: 6px;
+}
+
+QScrollArea {
+    background: transparent;
+    border: none;
+}
+
+QScrollArea > QWidget > QWidget {
+    background: transparent;
+}
+
+QStatusBar {
+    background-color: #0a0f18;
+    color: #8fb8d6;
+    border-top: 1px solid #1c3a4a;
+}
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background: #22384d;
+    border-radius: 5px;
+    min-height: 24px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #5ce1e6;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}

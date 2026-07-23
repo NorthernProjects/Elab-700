@@ -1,0 +1,117 @@
+name: Build macOS installers
+
+# Produces 4 .dmg files (2 brandings x 2 CPU architectures) from the exact
+# same source this project builds on Windows — see CMakeLists.txt for the
+# E_LAB_SCHOOL_BRANDING option and README.md > "Compiler pour macOS" for the
+# full explanation. Written and wired up from a Windows machine with no
+# access to real Apple hardware for testing, so treat the FIRST successful
+# run here as the actual first test of this pipeline — check the artifacts
+# on a real Mac before trusting it as more than "it compiled".
+#
+# Runs on every push to main and can be triggered manually from the Actions
+# tab (workflow_dispatch) to rebuild on demand without pushing a commit.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - branding: public
+            branding_flag: "OFF"
+            runner: macos-13   # Intel (x86_64) hosted runner
+            arch: x86_64
+          - branding: public
+            branding_flag: "OFF"
+            runner: macos-14   # Apple Silicon (arm64) hosted runner
+            arch: arm64
+          - branding: ruelle
+            branding_flag: "ON"
+            runner: macos-13
+            arch: x86_64
+          - branding: ruelle
+            branding_flag: "ON"
+            runner: macos-14
+            arch: arm64
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies (Homebrew)
+        run: |
+          brew install qt@6 opencv dylibbundler
+          echo "$(brew --prefix qt@6)/bin" >> "$GITHUB_PATH"
+
+      - name: Generate the .icns app icon for this branding
+        run: |
+          mkdir -p resources
+          if [ "${{ matrix.branding }}" = "ruelle" ]; then
+            iconutil -c icns resources/mac_iconset_ruelle.iconset -o resources/AppIcon_ruelle.icns
+          else
+            iconutil -c icns resources/mac_iconset_public.iconset -o resources/AppIcon_public.icns
+          fi
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
+            -DE_LAB_SCHOOL_BRANDING=${{ matrix.branding_flag }} \
+            -DCMAKE_PREFIX_PATH="$(brew --prefix qt@6)" \
+            -DOpenCV_DIR="$(brew --prefix opencv)/lib/cmake/opencv4"
+
+      - name: Build
+        run: cmake --build build --config Release -j"$(sysctl -n hw.logicalcpu)"
+
+      - name: Bundle Qt frameworks (macdeployqt)
+        run: |
+          "$(brew --prefix qt@6)/bin/macdeployqt" build/Release/E-Lab700.app -verbose=1
+
+      - name: Bundle non-Qt libraries (OpenCV, via dylibbundler)
+        run: |
+          dylibbundler -od -b \
+            -x build/Release/E-Lab700.app/Contents/MacOS/E-Lab700 \
+            -d build/Release/E-Lab700.app/Contents/libs \
+            -p @executable_path/../libs
+
+      - name: Ad-hoc code signature
+        # No paid Apple Developer account here, so this is an AD-HOC
+        # signature (identity "-"), not a real one — required just for the
+        # app to launch AT ALL on Apple Silicon (arm64 refuses to run
+        # completely unsigned code, unlike Intel). Gatekeeper will still
+        # show "unidentified developer" on first launch; the workaround
+        # (right-click > Open, or the Xattr removal below) is documented in
+        # README.md > "Compiler pour macOS".
+        run: |
+          codesign --force --deep --sign - build/Release/E-Lab700.app
+
+      - name: Package .dmg
+        run: |
+          APP_NAME="E-Lab 700"
+          STAGE_DIR="dmg-stage"
+          rm -rf "$STAGE_DIR"
+          mkdir -p "$STAGE_DIR"
+          cp -R build/Release/E-Lab700.app "$STAGE_DIR/$APP_NAME.app"
+          ln -s /Applications "$STAGE_DIR/Applications"
+
+          if [ "${{ matrix.branding }}" = "ruelle" ]; then
+            OUT_NAME="E-Lab700-RuelleDeLavenir-Setup-mac-${{ matrix.arch }}.dmg"
+          else
+            OUT_NAME="E-Lab700-Setup-mac-${{ matrix.arch }}.dmg"
+          fi
+
+          hdiutil create -volname "$APP_NAME" -srcfolder "$STAGE_DIR" -ov -format UDZO "$OUT_NAME"
+          echo "OUT_NAME=$OUT_NAME" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.OUT_NAME }}
+          path: ${{ env.OUT_NAME }}
+          if-no-files-found: error
