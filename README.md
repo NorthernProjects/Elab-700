@@ -4,8 +4,7 @@ Application de microscopie numérique pour une salle de classe (élèves de 10 �
 12 ans), pensée comme une alternative plus simple et plus moderne à ToupView,
 tout en restant du niveau d'un logiciel professionnel.
 
-- **Plateforme initiale :** Windows 11
-- **Plateforme future :** macOS
+- **Plateformes :** Windows 11, macOS (11 Big Sur et plus récent)
 - **Matériel visé :** microscope trinoculaire OMAX + caméra USB OMAX/ToupTek
   (identifiant caméra observé dans ToupView : `SCMOS05000KPA`, résolution
   1280x1024 — à confirmer sur votre poste, voir plus bas)
@@ -233,10 +232,59 @@ les anciens scripts des variantes séparées, conservés pour référence.)
 Distribué sous licence MIT (voir `LICENSE`) — libre à vous de le partager, le
 modifier, l'adapter à votre propre microscope.
 
+## Compiler pour macOS
+
+Le code est cross-platform (`UvcCameraBackend` utilise DirectShow sur Windows
+et AVFoundation sur macOS via OpenCV ; `MailSender_mac.mm` remplace le MAPI
+Windows par `NSSharingService`), mais **produire les .dmg nécessite de
+compiler sur un vrai Mac** — ni CMake ni Qt ne se cross-compilent
+correctement pour macOS depuis Windows. Deux façons de l'obtenir :
+
+### Automatiquement, via GitHub Actions (recommandé)
+
+Le fichier `.github/workflows/macos-build.yml` construit les **4 .dmg**
+(École × Open Source, Intel × Apple Silicon) sur de vraies machines Mac
+prêtées gratuitement par GitHub, à chaque push sur `main` ou à la demande
+(onglet *Actions* → *Build macOS installers* → *Run workflow*) :
+
+1. Créer un dépôt GitHub (public de préférence — les minutes macOS des
+   runners gratuits sont illimitées sur un dépôt public, mais comptées avec
+   un facteur ×10 sur un dépôt privé).
+2. Pousser ce projet dedans (`git remote add origin <url>` puis
+   `git push -u origin main`).
+3. Onglet **Actions** du dépôt : le workflow se lance automatiquement ;
+   les 4 `.dmg` apparaissent en bas de la page d'exécution, section
+   *Artifacts*, une fois terminé (15-25 min).
+
+**Important — à valider avant diffusion** : ce pipeline a été écrit et câblé
+depuis Windows, sans aucun Mac pour le tester. La première exécution est donc
+le premier vrai test — vérifiez qu'un `.dmg` s'installe et fonctionne
+réellement sur un Mac avant de le partager. Sans compte développeur Apple
+payant (99 $/an), l'app n'est signée qu'en *ad-hoc* : au premier lancement,
+macOS affichera "développeur non identifié" — clic droit sur l'app → *Ouvrir*
+(une seule fois) débloque l'application définitivement.
+
+### Manuellement, sur un Mac
+
+```bash
+brew install qt@6 opencv dylibbundler
+iconutil -c icns resources/mac_iconset_public.iconset -o resources/AppIcon_public.icns   # ou _ruelle avec -DE_LAB_SCHOOL_BRANDING=ON
+cmake -S . -B build -DCMAKE_PREFIX_PATH="$(brew --prefix qt@6)" -DOpenCV_DIR="$(brew --prefix opencv)/lib/cmake/opencv4"
+cmake --build build --config Release
+"$(brew --prefix qt@6)/bin/macdeployqt" build/Release/E-Lab700.app
+dylibbundler -od -b -x build/Release/E-Lab700.app/Contents/MacOS/E-Lab700 \
+  -d build/Release/E-Lab700.app/Contents/libs -p @executable_path/../libs
+codesign --force --deep --sign - build/Release/E-Lab700.app
+```
+
+Puis glisser `E-Lab700.app` dans un `.dmg` (ou directement dans
+`/Applications`) — voir le détail exact des étapes dans
+`.github/workflows/macos-build.yml`.
+
 ## Limites connues / suite prévue
 
-- macOS : l'abstraction `CameraBackend` est prête, mais aucun backend macOS
-  (UVC natif ou portage du SDK) n'est encore écrit.
+- Le pipeline macOS (voir ci-dessus) n'a encore jamais tourné sur un vrai Mac
+  au moment de l'écriture — premier passage à valider.
 - Un backend caméra UVC générique (webcam standard) ou carte de capture HDMI
   peut être ajouté en implémentant `CameraBackend`, sans toucher à l'UI.
 - Pas de tests automatisés pour l'instant (l'essentiel de la logique métier
