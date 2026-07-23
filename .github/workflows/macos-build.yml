@@ -71,13 +71,13 @@ jobs:
 
       - name: Bundle Qt frameworks (macdeployqt)
         run: |
-          "$(brew --prefix qt@6)/bin/macdeployqt" build/Release/E-Lab700.app -verbose=1
+          "$(brew --prefix qt@6)/bin/macdeployqt" build/E-Lab700.app -verbose=1
 
       - name: Bundle non-Qt libraries (OpenCV, via dylibbundler)
         run: |
           dylibbundler -od -b \
-            -x build/Release/E-Lab700.app/Contents/MacOS/E-Lab700 \
-            -d build/Release/E-Lab700.app/Contents/libs \
+            -x build/E-Lab700.app/Contents/MacOS/E-Lab700 \
+            -d build/E-Lab700.app/Contents/libs \
             -p @executable_path/../libs
 
       - name: Ad-hoc code signature
@@ -89,7 +89,7 @@ jobs:
         # (right-click > Open, or the Xattr removal below) is documented in
         # README.md > "Compiler pour macOS".
         run: |
-          codesign --force --deep --sign - build/Release/E-Lab700.app
+          codesign --force --deep --sign - build/E-Lab700.app
 
       - name: Package .dmg
         run: |
@@ -97,7 +97,7 @@ jobs:
           STAGE_DIR="dmg-stage"
           rm -rf "$STAGE_DIR"
           mkdir -p "$STAGE_DIR"
-          cp -R build/Release/E-Lab700.app "$STAGE_DIR/$APP_NAME.app"
+          cp -R build/E-Lab700.app "$STAGE_DIR/$APP_NAME.app"
           ln -s /Applications "$STAGE_DIR/Applications"
 
           if [ "${{ matrix.branding }}" = "ruelle" ]; then
