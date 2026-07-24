@@ -149,7 +149,22 @@ jobs:
             OUT_NAME="E-Lab700-Setup-mac-${{ matrix.arch }}.dmg"
           fi
 
-          hdiutil create -volname "$APP_NAME" -srcfolder "$STAGE_DIR" -ov -format UDZO "$OUT_NAME"
+          # hdiutil intermittently fails with "Resource busy" right after
+          # codesign/cp touch the bundle (mdworker/Spotlight briefly holds a
+          # lock on the freshly written files) — retry a few times instead
+          # of failing the whole job on this known flaky race.
+          sync
+          for attempt in 1 2 3 4 5; do
+            if hdiutil create -volname "$APP_NAME" -srcfolder "$STAGE_DIR" -ov -format UDZO "$OUT_NAME"; then
+              break
+            fi
+            if [ "$attempt" = "5" ]; then
+              echo "hdiutil create failed after 5 attempts" >&2
+              exit 1
+            fi
+            echo "hdiutil create failed (attempt $attempt/5), retrying in 5s..."
+            sleep 5
+          done
           echo "OUT_NAME=$OUT_NAME" >> "$GITHUB_ENV"
 
       - name: Upload artifact
