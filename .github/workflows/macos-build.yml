@@ -117,9 +117,26 @@ jobs:
           "$BREW_PREFIX/opt/qt@6/bin/macdeployqt" build/E-Lab700.app -verbose=1
 
       - name: Bundle non-Qt libraries (OpenCV, via dylibbundler)
+        # macdeployqt already copies some non-Qt libraries (e.g. several
+        # libopencv_*.dylib pulled in transitively by Qt Multimedia plugins)
+        # into Contents/Frameworks, but it does NOT rewrite THEIR internal
+        # @rpath dependencies — they keep pointing at the build machine's
+        # absolute Homebrew path (e.g. /usr/local/Cellar/opencv/5.0.0/lib),
+        # which doesn't exist on the end user's Mac and crashes the app on
+        # launch ("Library not loaded: @rpath/libopencv_core.500.dylib").
+        # Passing every already-bundled .dylib/.so as an extra -x target
+        # makes dylibbundler fix those internal references too, not just
+        # the main executable's.
         run: |
+          EXTRA_TARGETS=()
+          while IFS= read -r -d '' lib; do
+            EXTRA_TARGETS+=(-x "$lib")
+          done < <(find build/E-Lab700.app/Contents/Frameworks build/E-Lab700.app/Contents/PlugIns \
+                     \( -name "*.dylib" -o -name "*.so" \) -print0 2>/dev/null)
+
           "$BREW_PREFIX/bin/dylibbundler" -od -b \
             -x build/E-Lab700.app/Contents/MacOS/E-Lab700 \
+            "${EXTRA_TARGETS[@]}" \
             -d build/E-Lab700.app/Contents/libs \
             -p @executable_path/../libs
 
