@@ -36,6 +36,10 @@
 #include "VideoView.h"
 #include "core/FileUtils.h"
 
+#if defined(Q_OS_MAC)
+#include "core/WindowChromeMac.h"
+#endif
+
 namespace {
 
 constexpr double kMinZoom = 1.0;
@@ -139,6 +143,16 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(m_topBar);
     layout->addWidget(m_videoView, 1);
     layout->addWidget(m_bottomBar);
+
+#if defined(Q_OS_MAC)
+    // Our own top bar already shows the app logo/name — drop the separate
+    // white titlebar strip (and the "E-Lab 700" repeated in it), keeping
+    // only the red/orange/green traffic lights, which now float directly
+    // over m_topBar. setLeftInset() keeps the logo/connection indicator from
+    // sitting underneath that button cluster.
+    applyMacTransparentTitlebar(this);
+    m_topBar->setLeftInset(72);
+#endif
 
     setCentralWidget(central);
 

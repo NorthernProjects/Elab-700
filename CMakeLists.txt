@@ -54,6 +54,14 @@ elseif(APPLE)
     set(MAIL_SENDER_SOURCE src/core/MailSender_mac.mm)
 endif()
 
+# Transparent-titlebar / traffic-lights-only window chrome: macOS-only (see
+# WindowChromeMac.h), call sites in MainWindow.cpp/TopStatusBar.cpp are
+# guarded by #ifdef Q_OS_MAC so this list stays empty on Windows.
+set(WINDOW_CHROME_MAC_SOURCE "")
+if(APPLE)
+    set(WINDOW_CHROME_MAC_SOURCE src/core/WindowChromeMac.h src/core/WindowChromeMac.mm)
+endif()
+
 set(CORE_SOURCES
     src/core/CameraTypes.h
     src/core/CameraBackend.h
@@ -71,6 +79,7 @@ set(CORE_SOURCES
     src/core/AppSettings.cpp
     src/core/MailSender.h
     ${MAIL_SENDER_SOURCE}
+    ${WINDOW_CHROME_MAC_SOURCE}
     src/core/FileUtils.h
     src/core/FileUtils.cpp
 )
@@ -202,9 +211,10 @@ if(E_LAB_SCHOOL_BRANDING)
 endif()
 
 if(APPLE)
-    # MailSender_mac.mm is Objective-C++ and uses ARC (no manual
-    # retain/release) — the rest of the project stays plain C++17.
-    set_source_files_properties(src/core/MailSender_mac.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+    # MailSender_mac.mm and WindowChromeMac.mm are Objective-C++ and use ARC
+    # (no manual retain/release) — the rest of the project stays plain C++17.
+    set_source_files_properties(src/core/MailSender_mac.mm src/core/WindowChromeMac.mm
+        PROPERTIES COMPILE_FLAGS "-fobjc-arc")
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
 endif()
 

@@ -4,6 +4,10 @@
 #include <QHBoxLayout>
 #include <QPixmap>
 #include <QStyle>
+#if defined(Q_OS_MAC)
+#include <QMouseEvent>
+#include <QWindow>
+#endif
 
 TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
 {
@@ -92,14 +96,14 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     rightLayout->addWidget(m_helpButton);
     rightLayout->addWidget(m_teacherButton);
 
-    auto *layout = new QGridLayout(this);
-    layout->setContentsMargins(16, 8, 16, 8);
-    layout->setColumnStretch(0, 1);
-    layout->setColumnStretch(1, 0);
-    layout->setColumnStretch(2, 1);
-    layout->addWidget(leftContainer, 0, 0, Qt::AlignLeft | Qt::AlignVCenter);
-    layout->addWidget(m_microscopeLabel, 0, 1, Qt::AlignCenter);
-    layout->addWidget(rightContainer, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
+    m_layout = new QGridLayout(this);
+    m_layout->setContentsMargins(m_baseLeftMargin, 8, 16, 8);
+    m_layout->setColumnStretch(0, 1);
+    m_layout->setColumnStretch(1, 0);
+    m_layout->setColumnStretch(2, 1);
+    m_layout->addWidget(leftContainer, 0, 0, Qt::AlignLeft | Qt::AlignVCenter);
+    m_layout->addWidget(m_microscopeLabel, 0, 1, Qt::AlignCenter);
+    m_layout->addWidget(rightContainer, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
 
     connect(m_teacherButton, &QPushButton::clicked, this, &TopStatusBar::teacherModeRequested);
     connect(m_groupButton, &QPushButton::clicked, this, &TopStatusBar::groupSelectionRequested);
@@ -156,6 +160,27 @@ void TopStatusBar::setMicroscopeName(const QString &name)
     m_microscopeLabel->setText(trimmed.isEmpty()
         ? QStringLiteral("E-Lab 700")
         : QStringLiteral("E-Lab 700 · %1").arg(trimmed));
+}
+
+#if defined(Q_OS_MAC)
+void TopStatusBar::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) {
+        if (QWindow *handle = window()->windowHandle()) {
+            handle->startSystemMove();
+            event->accept();
+            return;
+        }
+    }
+    QWidget::mousePressEvent(event);
+}
+#endif
+
+void TopStatusBar::setLeftInset(int pixels)
+{
+    QMargins margins = m_layout->contentsMargins();
+    margins.setLeft(m_baseLeftMargin + pixels);
+    m_layout->setContentsMargins(margins);
 }
 
 void TopStatusBar::setGroupInfo(const QString &className, const QString &groupName)

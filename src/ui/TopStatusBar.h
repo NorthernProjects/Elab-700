@@ -1,9 +1,12 @@
 #pragma once
 
+#include <QGridLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QSize>
 #include <QWidget>
+
+class QMouseEvent;
 
 // Top strip: camera connection indicator, fps, resolution on the left; the
 // software/microscope name centered (clicking the microscope name shows its
@@ -33,6 +36,23 @@ public slots:
     void setGroupButtonVisible(bool visible);
     void setTeacherButtonToolTip(const QString &tip);
 
+    // Extra left margin, in pixels, added on top of the normal content
+    // margin — used on macOS to keep the logo/connection indicator clear of
+    // the traffic-light buttons when the native titlebar is hidden (see
+    // MainWindow / WindowChromeMac). No-op call on other platforms.
+    void setLeftInset(int pixels);
+
+protected:
+#if defined(Q_OS_MAC)
+    // Only needed on macOS: hiding the native titlebar (see MainWindow /
+    // WindowChromeMac) also removes the OS's own click-and-drag-to-move
+    // behavior for that area, so this bar has to provide it itself for
+    // clicks on its empty background (buttons still get their own clicks
+    // first, same as a real titlebar). No-op on other platforms, which keep
+    // their native titlebar and don't need this.
+    void mousePressEvent(QMouseEvent *event) override;
+#endif
+
 signals:
     void teacherModeRequested();
     void groupSelectionRequested();
@@ -50,4 +70,6 @@ private:
     QPushButton *m_resolutionButton;
     QPushButton *m_teacherButton;
     QPushButton *m_helpButton;
+    QGridLayout *m_layout;
+    int m_baseLeftMargin = 16;
 };
