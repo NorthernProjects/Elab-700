@@ -247,6 +247,18 @@ Le fichier `.github/workflows/macos-build.yml` construit les **4 .dmg**
 prêtées gratuitement par GitHub, à chaque push sur `main` ou à la demande
 (onglet *Actions* → *Build macOS installers* → *Run workflow*) :
 
+**Note sur le build Intel (x86_64)** : les 4 jobs tournent tous sur des
+runners Apple Silicon (`macos-14`) — les runners Intel hébergés par GitHub
+(`macos-13`) sont restés bloqués en file d'attente indéfiniment lors du
+premier essai (GitHub réduit fortement cette capacité depuis qu'Apple ne
+vend plus de Mac Intel). Le build x86_64 est donc obtenu par
+**cross-compilation depuis le runner arm64** : un second Homebrew "Intel"
+est installé sous Rosetta 2 dans `/usr/local`, et `CMAKE_OSX_ARCHITECTURES`
+force Clang à produire du code x86_64. Si Homebrew ne trouve pas de bottle
+précompilée x86_64 pour Qt/OpenCV sur l'image macOS du runner, il les
+recompile depuis les sources — dans ce cas le job peut prendre 1 à 3 heures
+au lieu de quelques minutes (à surveiller sur les premières exécutions).
+
 1. Créer un dépôt GitHub (public de préférence — les minutes macOS des
    runners gratuits sont illimitées sur un dépôt public, mais comptées avec
    un facteur ×10 sur un dépôt privé).
