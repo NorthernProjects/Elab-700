@@ -73,6 +73,19 @@ jobs:
               "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
           fi
 
+      - name: Remove pre-existing python3 symlinks (x86_64 cross-build only)
+        # The macos-14 runner image ships its own python3/pip3/idle3 symlinks
+        # under /usr/local/bin. Installing opencv pulls in python@3.14 as a
+        # dependency, and Homebrew's link step fails (non-fatal to the
+        # Cellar install itself, but it makes the whole `brew install`
+        # command exit non-zero) when it can't overwrite those pre-existing
+        # files. We don't need the system python3 on PATH for this build, so
+        # just clear the conflicting symlinks first.
+        if: matrix.arch == 'x86_64'
+        run: |
+          rm -f /usr/local/bin/2to3* /usr/local/bin/idle3* /usr/local/bin/pip3* \
+                /usr/local/bin/pydoc3* /usr/local/bin/python3*
+
       - name: Install build dependencies (Homebrew)
         run: |
           $ARCH_PREFIX "$BREW_BIN" install qt@6 opencv dylibbundler
