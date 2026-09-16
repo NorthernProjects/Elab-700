@@ -18,12 +18,42 @@ name: Build macOS installers
 #   - CMAKE_OSX_ARCHITECTURES=x86_64 tells the (arch-agnostic) Apple clang
 #     to emit x86_64 object code regardless of the host being arm64
 #
+# Two more wrinkles, both discovered by actually testing a built .dmg on old
+# hardware (a 2015 MacBook Pro, macOS 12.7.6) rather than trusting a green
+# CI run:
+#
+# 1. Homebrew's own installer script now refuses to run on any non-Apple-
+#    Silicon host (Homebrew 7.0, Sept 2026) — including under Rosetta, since
+#    it checks `uname -m`. The x86_64 leg below no longer uses that script;
+#    it bootstraps Homebrew manually (a plain tarball extract into the
+#    classic Intel prefix), which still works.
+# 2. Homebrew's qt formula hard-codes `CMAKE_OSX_DEPLOYMENT_TARGET` to the
+#    BUILD machine's own macOS version, not to any target we choose. Built
+#    on this macos-14 (Sonoma) runner, that means the resulting
+#    QtWidgets.framework references libc++ symbols (std::pmr) that don't
+#    exist on macOS < 14 — the app crashes on launch on anything older with
+#    "Symbol not found: __ZNSt3__13pmr15memory_resourceD2Ev, Expected in:
+#    /usr/lib/libc++.1.dylib" (confirmed on the same 2015 MacBook Pro). We
+#    patch the local Homebrew tap's qt.rb to pin a low deployment target
+#    (matching CMAKE_OSX_DEPLOYMENT_TARGET in CMakeLists.txt) and force a
+#    from-source rebuild of just Qt — its dependencies keep using normal
+#    bottles. This is why HOMEBREW_NO_INSTALL_FROM_API is set (the patch has
+#    to land in an actual local Formula file, not the API-served JSON) and
+#    why the job timeout below is generous: building Qt from source easily
+#    takes over an hour.
+#
 # Runs on every push to main and can be triggered manually from the Actions
 # tab (workflow_dispatch) to rebuild on demand without pushing a commit.
 on:
   push:
     branches: [main]
   workflow_dispatch: {}
+
+env:
+  # Needed so `brew tap`/formula edits below actually take effect — recent
+  # Homebrew installs formulae from a remote JSON API by default and never
+  # looks at the local Formula/*.rb files otherwise.
+  HOMEBREW_NO_INSTALL_FROM_API: "1"
 
 jobs:
   build:
@@ -45,6 +75,10 @@ jobs:
             arch: x86_64
 
     runs-on: macos-14
+    # Generous headroom for the from-source Qt build (see note above) —
+    # default runner timeout would likely be enough too, but this makes the
+    # expectation explicit instead of relying on the default.
+    timeout-minutes: 300
 
     steps:
       - uses: actions/checkout@v4
@@ -66,11 +100,21 @@ jobs:
         run: softwareupdate --install-rosetta --agree-to-license || true
 
       - name: Install an Intel Homebrew under Rosetta (x86_64 cross-build only)
+        # Homebrew's official installer aborts on any host that isn't Apple
+        # Silicon (as of Homebrew 7.0) — `arch -x86_64` under Rosetta still
+        # reports as x86_64 to `uname -m`, so it refuses here too. Bootstrap
+        # manually instead: the classic Intel layout is just the `brew` repo
+        # extracted into /usr/local/Homebrew with a symlink into
+        # /usr/local/bin — no architecture check involved.
         if: matrix.arch == 'x86_64'
         run: |
           if [ ! -x "$BREW_BIN" ]; then
-            NONINTERACTIVE=1 $ARCH_PREFIX /bin/bash -c \
-              "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            sudo mkdir -p /usr/local/Homebrew
+            sudo chown -R "$(whoami)" /usr/local/Homebrew
+            $ARCH_PREFIX curl -L https://github.com/Homebrew/brew/tarball/main \
+              | $ARCH_PREFIX tar xz --strip-components 1 -C /usr/local/Homebrew
+            sudo mkdir -p /usr/local/bin
+            sudo ln -sf /usr/local/Homebrew/bin/brew /usr/local/bin/brew
           fi
 
       - name: Remove pre-existing python3 symlinks (x86_64 cross-build only)
@@ -86,9 +130,24 @@ jobs:
           rm -f /usr/local/bin/2to3* /usr/local/bin/idle3* /usr/local/bin/pip3* \
                 /usr/local/bin/pydoc3* /usr/local/bin/python3*
 
+      - name: Pin Qt's deployment target so the .dmg runs on older macOS too
+        # See the top-of-file note: Homebrew's qt formula otherwise targets
+        # this runner's own macOS version (14.0), which crashes the app on
+        # launch on anything older. Match CMAKE_OSX_DEPLOYMENT_TARGET from
+        # CMakeLists.txt so our own code and Qt agree on the floor.
+        run: |
+          $ARCH_PREFIX "$BREW_BIN" tap homebrew/core
+          QT_FORMULA="$($ARCH_PREFIX "$BREW_BIN" --repo homebrew/core)/Formula/q/qt.rb"
+          sed -i '' 's/CMAKE_OSX_DEPLOYMENT_TARGET=#{MacOS\.version}\.0/CMAKE_OSX_DEPLOYMENT_TARGET=11.0/' "$QT_FORMULA"
+          grep -n "CMAKE_OSX_DEPLOYMENT_TARGET" "$QT_FORMULA"
+
       - name: Install build dependencies (Homebrew)
         run: |
-          $ARCH_PREFIX "$BREW_BIN" install qt@6 opencv dylibbundler
+          # Only Qt needs the from-source rebuild (see patch above) — its
+          # dependencies and OpenCV/dylibbundler install normally from
+          # existing bottles.
+          $ARCH_PREFIX "$BREW_BIN" install --build-from-source qt@6
+          $ARCH_PREFIX "$BREW_BIN" install opencv dylibbundler
           echo "$BREW_PREFIX/opt/qt@6/bin" >> "$GITHUB_PATH"
 
       - name: Generate the .icns app icon for this branding
