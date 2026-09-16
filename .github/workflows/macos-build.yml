@@ -135,9 +135,24 @@ jobs:
         # this runner's own macOS version (14.0), which crashes the app on
         # launch on anything older. Match CMAKE_OSX_DEPLOYMENT_TARGET from
         # CMakeLists.txt so our own code and Qt agree on the floor.
+        # `set -x` + explicit exit-code echoes: the previous attempt at this
+        # step failed with zero captured output, so make every command (and
+        # its expansion) show up in the log even if a failure's own
+        # stderr doesn't.
         run: |
-          $ARCH_PREFIX "$BREW_BIN" tap homebrew/core
-          QT_FORMULA="$($ARCH_PREFIX "$BREW_BIN" --repo homebrew/core)/Formula/q/qt.rb"
+          set -x
+          tap_ec=0
+          $ARCH_PREFIX "$BREW_BIN" tap homebrew/core || tap_ec=$?
+          echo "brew tap exit code: $tap_ec"
+
+          repo_ec=0
+          QT_REPO="$($ARCH_PREFIX "$BREW_BIN" --repo homebrew/core)" || repo_ec=$?
+          echo "QT_REPO=$QT_REPO (exit $repo_ec)"
+          ls -la "$QT_REPO" || echo "QT_REPO listing failed: $?"
+
+          QT_FORMULA="$QT_REPO/Formula/q/qt.rb"
+          ls -la "$QT_FORMULA" || echo "qt.rb not found: $?"
+
           sed -i '' 's/CMAKE_OSX_DEPLOYMENT_TARGET=#{MacOS\.version}\.0/CMAKE_OSX_DEPLOYMENT_TARGET=11.0/' "$QT_FORMULA"
           grep -n "CMAKE_OSX_DEPLOYMENT_TARGET" "$QT_FORMULA"
 
