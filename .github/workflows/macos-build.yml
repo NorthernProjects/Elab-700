@@ -155,10 +155,19 @@ jobs:
         # dependency libraries, and for OpenCV/dylibbundler — none of those
         # exhibited this symbol problem.
         run: |
-          $ARCH_PREFIX "$BREW_BIN" install cmake ninja pkgconf \
+          $ARCH_PREFIX "$BREW_BIN" install --verbose cmake ninja pkgconf \
             brotli dbus double-conversion freetype glib harfbuzz "icu4c@78" \
             jpeg-turbo libb2 libpng md4c "openssl@3" pcre2 zstd
-          $ARCH_PREFIX "$BREW_BIN" install opencv dylibbundler
+
+      - name: Install OpenCV + dylibbundler (Homebrew)
+        # Split out from the step above so its log actually shows up while
+        # still running — GitHub only serves a step's log once that step
+        # completes, and OpenCV can be slow to build from source (no more
+        # routine Intel bottles per Homebrew's Tier 3 policy), so lumping it
+        # into one step left us with zero visibility for over an hour on the
+        # x86_64 leg with no way to tell progress from a hang.
+        run: |
+          $ARCH_PREFIX "$BREW_BIN" install --verbose opencv dylibbundler
 
       - name: Build Qt (qtbase) from source, targeting old macOS
         env:
