@@ -12,9 +12,9 @@ name: Build macOS installers
 # from the arm64 runner instead of waiting for an Intel runner:
 #   - a second, Intel-only Homebrew is installed under Rosetta 2 at
 #     /usr/local (the classic Intel prefix; /opt/homebrew stays arm64-only)
-#   - Qt/OpenCV/dylibbundler are installed from THAT Homebrew, so the actual
-#     tool binaries (macdeployqt, dylibbundler) are x86_64 Mach-O — macOS
-#     runs them transparently via Rosetta, no special invocation needed
+#   - OpenCV/dylibbundler (and Qt's own non-Qt dependencies) are installed
+#     from THAT Homebrew, so dylibbundler ends up x86_64 Mach-O — macOS runs
+#     it transparently via Rosetta, no special invocation needed
 #   - CMAKE_OSX_ARCHITECTURES=x86_64 tells the (arch-agnostic) Apple clang
 #     to emit x86_64 object code regardless of the host being arm64
 #
@@ -27,20 +27,24 @@ name: Build macOS installers
 #    it checks `uname -m`. The x86_64 leg below no longer uses that script;
 #    it bootstraps Homebrew manually (a plain tarball extract into the
 #    classic Intel prefix), which still works.
-# 2. Homebrew's qt formula hard-codes `CMAKE_OSX_DEPLOYMENT_TARGET` to the
-#    BUILD machine's own macOS version, not to any target we choose. Built
-#    on this macos-14 (Sonoma) runner, that means the resulting
-#    QtWidgets.framework references libc++ symbols (std::pmr) that don't
-#    exist on macOS < 14 — the app crashes on launch on anything older with
-#    "Symbol not found: __ZNSt3__13pmr15memory_resourceD2Ev, Expected in:
-#    /usr/lib/libc++.1.dylib" (confirmed on the same 2015 MacBook Pro). We
-#    patch the local Homebrew tap's qt.rb to pin a low deployment target
-#    (matching CMAKE_OSX_DEPLOYMENT_TARGET in CMakeLists.txt) and force a
-#    from-source rebuild of just Qt — its dependencies keep using normal
-#    bottles. This is why HOMEBREW_NO_INSTALL_FROM_API is set (the patch has
-#    to land in an actual local Formula file, not the API-served JSON) and
-#    why the job timeout below is generous: building Qt from source easily
-#    takes over an hour.
+# 2. Homebrew cannot build anything targeting an older macOS than the
+#    machine doing the build — confirmed by Homebrew maintainers
+#    (github.com/orgs/Homebrew/discussions/2340): its build wrapper
+#    ("superenv") actively strips any CMAKE_OSX_DEPLOYMENT_TARGET /
+#    MACOSX_DEPLOYMENT_TARGET override. Built on this macos-14 (Sonoma)
+#    runner via `brew install qt`, the resulting QtWidgets.framework
+#    referenced libc++ symbols (std::pmr) absent on macOS < 14 — the app
+#    crashed on launch on anything older with "Symbol not found:
+#    __ZNSt3__13pmr15memory_resourceD2Ev, Expected in:
+#    /usr/lib/libc++.1.dylib" (confirmed on the same 2015 MacBook Pro).
+#    Fixed by NOT installing Qt through Homebrew at all: the "Build Qt
+#    (qtbase)" and "Build macdeployqt" steps below download Qt's own
+#    upstream source and invoke cmake directly, so our own
+#    -DCMAKE_OSX_DEPLOYMENT_TARGET (matching CMakeLists.txt) actually takes
+#    effect. Homebrew is still used normally for qtbase's own non-Qt
+#    dependency libraries and for OpenCV/dylibbundler — neither showed this
+#    problem. This is also why the job timeout below is generous: building
+#    Qt from source easily takes over an hour.
 #
 # Runs on every push to main and can be triggered manually from the Actions
 # tab (workflow_dispatch) to rebuild on demand without pushing a commit.
@@ -48,12 +52,6 @@ on:
   push:
     branches: [main]
   workflow_dispatch: {}
-
-env:
-  # Needed so `brew tap`/formula edits below actually take effect — recent
-  # Homebrew installs formulae from a remote JSON API by default and never
-  # looks at the local Formula/*.rb files otherwise.
-  HOMEBREW_NO_INSTALL_FROM_API: "1"
 
 jobs:
   build:
@@ -130,40 +128,97 @@ jobs:
           rm -f /usr/local/bin/2to3* /usr/local/bin/idle3* /usr/local/bin/pip3* \
                 /usr/local/bin/pydoc3* /usr/local/bin/python3*
 
-      - name: Pin Qt's deployment target so the .dmg runs on older macOS too
-        # See the top-of-file note: Homebrew's qt formula otherwise targets
-        # this runner's own macOS version (14.0), which crashes the app on
-        # launch on anything older. Match CMAKE_OSX_DEPLOYMENT_TARGET from
-        # CMakeLists.txt so our own code and Qt agree on the floor.
-        # `set -x` + explicit exit-code echoes: the previous attempt at this
-        # step failed with zero captured output, so make every command (and
-        # its expansion) show up in the log even if a failure's own
-        # stderr doesn't.
+      - name: Install non-Qt build dependencies (Homebrew)
+        # Homebrew's own qt/qtbase formula cannot be used for a Qt that
+        # needs to run on older macOS than this runner: Homebrew's build
+        # wrapper ("superenv") strips any CMAKE_OSX_DEPLOYMENT_TARGET /
+        # MACOSX_DEPLOYMENT_TARGET override, so it always targets the build
+        # host's own OS (confirmed by Homebrew maintainers — see
+        # https://github.com/orgs/Homebrew/discussions/2340). That's why the
+        # CI-built app crashed on launch on a 2015 MacBook Pro (macOS
+        # 12.7.6) with "Symbol not found: __ZNSt3__13pmr15memory_resourceD2Ev"
+        # — QtWidgets, built by Homebrew targeting this runner's macOS 14,
+        # referenced a libc++ symbol absent on anything older.
+        #
+        # So the two steps below build Qt itself (qtbase, plus just the
+        # macdeployqt tool from qttools) directly from Qt's own upstream
+        # source, invoking cmake ourselves — outside Homebrew's superenv,
+        # our own -DCMAKE_OSX_DEPLOYMENT_TARGET actually takes effect.
+        # Homebrew is still used normally here for qtbase's own (non-Qt)
+        # dependency libraries, and for OpenCV/dylibbundler — none of those
+        # exhibited this symbol problem.
         run: |
-          set -x
-          tap_ec=0
-          $ARCH_PREFIX "$BREW_BIN" tap homebrew/core || tap_ec=$?
-          echo "brew tap exit code: $tap_ec"
-
-          repo_ec=0
-          QT_REPO="$($ARCH_PREFIX "$BREW_BIN" --repo homebrew/core)" || repo_ec=$?
-          echo "QT_REPO=$QT_REPO (exit $repo_ec)"
-          ls -la "$QT_REPO" || echo "QT_REPO listing failed: $?"
-
-          QT_FORMULA="$QT_REPO/Formula/q/qt.rb"
-          ls -la "$QT_FORMULA" || echo "qt.rb not found: $?"
-
-          sed -i '' 's/CMAKE_OSX_DEPLOYMENT_TARGET=#{MacOS\.version}\.0/CMAKE_OSX_DEPLOYMENT_TARGET=11.0/' "$QT_FORMULA"
-          grep -n "CMAKE_OSX_DEPLOYMENT_TARGET" "$QT_FORMULA"
-
-      - name: Install build dependencies (Homebrew)
-        run: |
-          # Only Qt needs the from-source rebuild (see patch above) — its
-          # dependencies and OpenCV/dylibbundler install normally from
-          # existing bottles.
-          $ARCH_PREFIX "$BREW_BIN" install --build-from-source qt@6
+          $ARCH_PREFIX "$BREW_BIN" install cmake ninja pkgconf \
+            brotli dbus double-conversion freetype glib harfbuzz "icu4c@78" \
+            jpeg-turbo libb2 libpng md4c "openssl@3" pcre2 zstd
           $ARCH_PREFIX "$BREW_BIN" install opencv dylibbundler
-          echo "$BREW_PREFIX/opt/qt@6/bin" >> "$GITHUB_PATH"
+
+      - name: Build Qt (qtbase) from source, targeting old macOS
+        env:
+          QT_VERSION: "6.11.2"
+        run: |
+          set -euxo pipefail
+          QT_SRC_DIR="$RUNNER_TEMP/qt-src"
+          QT_INSTALL_PREFIX="$RUNNER_TEMP/qt-install"
+          echo "QT_INSTALL_PREFIX=$QT_INSTALL_PREFIX" >> "$GITHUB_ENV"
+          mkdir -p "$QT_SRC_DIR"
+
+          curl -fL "https://download.qt.io/official_releases/qt/6.11/${QT_VERSION}/submodules/qtbase-everywhere-src-${QT_VERSION}.tar.xz" \
+            -o "$RUNNER_TEMP/qtbase.tar.xz"
+          tar xf "$RUNNER_TEMP/qtbase.tar.xz" -C "$QT_SRC_DIR"
+
+          # icu4c/openssl/etc are keg-only in Homebrew (not symlinked into
+          # $BREW_PREFIX/lib) — collect each one's own prefix so CMake can
+          # actually find them, the same way Homebrew's own formula does.
+          QT_DEPS_PREFIX_PATH="$BREW_PREFIX"
+          for dep in icu4c@78 openssl@3 zstd pcre2 double-conversion freetype harfbuzz jpeg-turbo libpng libb2 md4c brotli dbus glib; do
+            QT_DEPS_PREFIX_PATH="$QT_DEPS_PREFIX_PATH;$($ARCH_PREFIX "$BREW_BIN" --prefix "$dep")"
+          done
+
+          $ARCH_PREFIX cmake -S "$QT_SRC_DIR/qtbase-everywhere-src-${QT_VERSION}" -B "$RUNNER_TEMP/qtbase-build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$QT_INSTALL_PREFIX" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
+            -DCMAKE_PREFIX_PATH="$QT_DEPS_PREFIX_PATH" \
+            -DQT_NO_APPLE_SDK_AND_XCODE_CHECK=ON \
+            -DQT_ALLOW_SYMLINK_IN_PATHS=ON \
+            -DFEATURE_system_doubleconversion=ON \
+            -DFEATURE_system_freetype=ON \
+            -DFEATURE_system_harfbuzz=ON \
+            -DFEATURE_system_jpeg=ON \
+            -DFEATURE_system_libb2=ON \
+            -DFEATURE_system_pcre2=ON \
+            -DFEATURE_system_png=ON \
+            -DFEATURE_system_sqlite=ON \
+            -DFEATURE_system_zlib=ON \
+            -DFEATURE_sql_mysql=OFF -DFEATURE_sql_odbc=OFF -DFEATURE_sql_psql=OFF \
+            -DFEATURE_openssl_linked=ON \
+            -DFEATURE_relocatable=ON
+
+          $ARCH_PREFIX cmake --build "$RUNNER_TEMP/qtbase-build" --parallel "$(sysctl -n hw.logicalcpu)"
+          $ARCH_PREFIX cmake --install "$RUNNER_TEMP/qtbase-build"
+
+      - name: Build macdeployqt from source (qttools), targeting old macOS
+        env:
+          QT_VERSION: "6.11.2"
+        run: |
+          set -euxo pipefail
+          curl -fL "https://download.qt.io/official_releases/qt/6.11/${QT_VERSION}/submodules/qttools-everywhere-src-${QT_VERSION}.tar.xz" \
+            -o "$RUNNER_TEMP/qttools.tar.xz"
+          tar xf "$RUNNER_TEMP/qttools.tar.xz" -C "$RUNNER_TEMP/qt-src"
+
+          $ARCH_PREFIX "$QT_INSTALL_PREFIX/bin/qt-cmake" \
+            -S "$RUNNER_TEMP/qt-src/qttools-everywhere-src-${QT_VERSION}" -B "$RUNNER_TEMP/qttools-build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
+            -DCMAKE_PREFIX_PATH="$BREW_PREFIX" \
+            -DQT_NO_APPLE_SDK_AND_XCODE_CHECK=ON \
+            -DFEATURE_clang=OFF
+
+          $ARCH_PREFIX cmake --build "$RUNNER_TEMP/qttools-build" --target macdeployqt --parallel "$(sysctl -n hw.logicalcpu)"
+          cp "$RUNNER_TEMP/qttools-build/bin/macdeployqt" "$QT_INSTALL_PREFIX/bin/macdeployqt"
 
       - name: Generate the .icns app icon for this branding
         run: |
@@ -180,7 +235,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
             -DE_LAB_SCHOOL_BRANDING=${{ matrix.branding_flag }} \
-            -DCMAKE_PREFIX_PATH="$BREW_PREFIX/opt/qt@6" \
+            -DCMAKE_PREFIX_PATH="$QT_INSTALL_PREFIX" \
             -DOpenCV_DIR="$BREW_PREFIX/opt/opencv/lib/cmake/opencv4"
 
       - name: Build
@@ -188,12 +243,13 @@ jobs:
 
       - name: Bundle Qt frameworks (macdeployqt)
         run: |
-          "$BREW_PREFIX/opt/qt@6/bin/macdeployqt" build/E-Lab700.app -verbose=1
+          "$QT_INSTALL_PREFIX/bin/macdeployqt" build/E-Lab700.app -verbose=1
 
       - name: Bundle non-Qt libraries (OpenCV, via dylibbundler)
-        # macdeployqt already copies some non-Qt libraries (e.g. several
-        # libopencv_*.dylib pulled in transitively by Qt Multimedia plugins)
-        # into Contents/Frameworks, but it does NOT rewrite THEIR internal
+        # macdeployqt already copies some non-Qt libraries (our own
+        # executable links OpenCV directly, and macdeployqt's dependency
+        # walk sweeps those dylibs up too) into Contents/Frameworks, but it
+        # does NOT rewrite THEIR internal
         # @rpath dependencies — they keep pointing at the build machine's
         # absolute Homebrew path (e.g. /usr/local/Cellar/opencv/5.0.0/lib),
         # which doesn't exist on the end user's Mac and crashes the app on
