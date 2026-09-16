@@ -107,12 +107,19 @@ jobs:
         if: matrix.arch == 'x86_64'
         run: |
           if [ ! -x "$BREW_BIN" ]; then
-            sudo mkdir -p /usr/local/Homebrew
-            sudo chown -R "$(whoami)" /usr/local/Homebrew
+            # Homebrew itself needs write access to the whole classic Intel
+            # directory set (var/Cellar/opt/etc — not just Homebrew/), which
+            # the official installer normally sets up for us. Do the same
+            # by hand since we can't use that installer here.
+            sudo mkdir -p /usr/local/Homebrew /usr/local/Cellar /usr/local/Caskroom \
+              /usr/local/Frameworks /usr/local/bin /usr/local/etc /usr/local/include \
+              /usr/local/lib /usr/local/opt /usr/local/sbin /usr/local/share /usr/local/var
+            sudo chown -R "$(whoami)" /usr/local/Homebrew /usr/local/Cellar /usr/local/Caskroom \
+              /usr/local/Frameworks /usr/local/bin /usr/local/etc /usr/local/include \
+              /usr/local/lib /usr/local/opt /usr/local/sbin /usr/local/share /usr/local/var
             $ARCH_PREFIX curl -L https://github.com/Homebrew/brew/tarball/main \
               | $ARCH_PREFIX tar xz --strip-components 1 -C /usr/local/Homebrew
-            sudo mkdir -p /usr/local/bin
-            sudo ln -sf /usr/local/Homebrew/bin/brew /usr/local/bin/brew
+            ln -sf /usr/local/Homebrew/bin/brew /usr/local/bin/brew
           fi
 
       - name: Remove pre-existing python3 symlinks (x86_64 cross-build only)
