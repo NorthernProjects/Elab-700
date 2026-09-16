@@ -224,8 +224,22 @@ jobs:
             -DQT_NO_APPLE_SDK_AND_XCODE_CHECK=ON \
             -DFEATURE_clang=OFF
 
-          $ARCH_PREFIX cmake --build "$RUNNER_TEMP/qttools-build" --target macdeployqt --parallel "$(sysctl -n hw.logicalcpu)"
-          cp "$RUNNER_TEMP/qttools-build/bin/macdeployqt" "$QT_INSTALL_PREFIX/bin/macdeployqt"
+          # `--target macdeployqt` doesn't exist under that exact name (ninja
+          # confirmed: "unknown target 'macdeployqt'") — rather than guess
+          # the real target name, just build everything qttools' own
+          # configure step decided to include (it already skips tools that
+          # need modules we don't have, like qtdeclarative, without
+          # failing) and locate the resulting binary afterwards.
+          $ARCH_PREFIX cmake --build "$RUNNER_TEMP/qttools-build" --parallel "$(sysctl -n hw.logicalcpu)"
+
+          MACDEPLOYQT_BIN="$(find "$RUNNER_TEMP/qttools-build" -type f -perm -u+x -name macdeployqt -print -quit)"
+          if [ -z "$MACDEPLOYQT_BIN" ]; then
+            echo "macdeployqt binary not found anywhere under the qttools build tree:" >&2
+            find "$RUNNER_TEMP/qttools-build" -iname '*macdeployqt*' >&2 || true
+            exit 1
+          fi
+          echo "Found macdeployqt at: $MACDEPLOYQT_BIN"
+          cp "$MACDEPLOYQT_BIN" "$QT_INSTALL_PREFIX/bin/macdeployqt"
 
       - name: Generate the .icns app icon for this branding
         run: |
