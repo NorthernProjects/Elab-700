@@ -280,23 +280,65 @@ macOS affichera "développeur non identifié" — clic droit sur l'app → *Ouvr
 
 ```bash
 brew install qt@6 opencv dylibbundler
-iconutil -c icns resources/mac_iconset_public.iconset -o resources/AppIcon_public.icns   # ou _ruelle avec -DE_LAB_SCHOOL_BRANDING=ON
+
+# Icône : _public (par défaut) ou _ruelle si vous passez -DE_LAB_SCHOOL_BRANDING=ON ci-dessous
+iconutil -c icns resources/mac_iconset_public.iconset -o resources/AppIcon_public.icns
+
 cmake -S . -B build -DCMAKE_PREFIX_PATH="$(brew --prefix qt@6)" -DOpenCV_DIR="$(brew --prefix opencv)/lib/cmake/opencv4"
 cmake --build build --config Release
-"$(brew --prefix qt@6)/bin/macdeployqt" build/Release/E-Lab700.app
-dylibbundler -od -b -x build/Release/E-Lab700.app/Contents/MacOS/E-Lab700 \
-  -d build/Release/E-Lab700.app/Contents/libs -p @executable_path/../libs
-codesign --force --deep --sign - build/Release/E-Lab700.app
+
+# Générateur macOS = single-config : le bundle est build/E-Lab700.app, PAS
+# build/Release/E-Lab700.app (piège classique si on copie une commande
+# écrite pour Windows/Visual Studio).
+"$(brew --prefix qt@6)/bin/macdeployqt" build/E-Lab700.app -verbose=1
+
+# macdeployqt copie des .dylib OpenCV dans Contents/Frameworks sans
+# réécrire LEURS propres références internes (elles pointent encore sur le
+# chemin Homebrew de la machine de build) — sans ce -x supplémentaire sur
+# chaque lib déjà copiée, l'app plante au lancement avec "Library not
+# loaded: @rpath/libopencv_core.*.dylib" sur toute autre machine que
+# celle-ci. Voir aussi .github/workflows/macos-build.yml (même fix côté CI).
+EXTRA_TARGETS=()
+while IFS= read -r -d '' lib; do
+  EXTRA_TARGETS+=(-x "$lib")
+done < <(find build/E-Lab700.app/Contents/Frameworks build/E-Lab700.app/Contents/PlugIns \
+           \( -name "*.dylib" -o -name "*.so" \) -print0 2>/dev/null)
+
+dylibbundler -od -b \
+  -x build/E-Lab700.app/Contents/MacOS/E-Lab700 \
+  "${EXTRA_TARGETS[@]}" \
+  -d build/E-Lab700.app/Contents/libs -p @executable_path/../libs
+
+codesign --force --deep --sign - build/E-Lab700.app
+open build/E-Lab700.app   # test direct, sans passer par un .dmg
 ```
 
 Puis glisser `E-Lab700.app` dans un `.dmg` (ou directement dans
 `/Applications`) — voir le détail exact des étapes dans
 `.github/workflows/macos-build.yml`.
 
+**Pourquoi compiler soi-même sur le Mac visé, et pas seulement utiliser le
+`.dmg` de la CI GitHub Actions ?** Le `.dmg` produit par
+`.github/workflows/macos-build.yml` est compilé sur les runners hébergés par
+GitHub, dont la version de macOS n'est pas choisie par nous — et Homebrew
+compile Qt en ciblant *exactement* la version de macOS de la machine qui
+compile (`CMAKE_OSX_DEPLOYMENT_TARGET` = version de l'hôte, décidé par la
+formule Homebrew elle-même). Résultat : un Qt compilé sur un runner récent
+référence des symboles de bibliothèque C++ (`libc++.1.dylib`) absents des
+Mac plus anciens, et l'app plante immédiatement au lancement
+("[App] a quitté de manière imprévue", `Termination Reason: Namespace DYLD,
+Code 4 Symbol missing`) — même si notre propre code cible bien macOS 11 (ce
+que ne garantit pas Qt/OpenCV, installés en binaires pré-compilés). En
+compilant directement sur le Mac visé (build manuel ci-dessus), Homebrew
+cible automatiquement la version de macOS de cette machine, donc le
+problème ne se pose pas.
+
 ## Limites connues / suite prévue
 
-- Le pipeline macOS (voir ci-dessus) n'a encore jamais tourné sur un vrai Mac
-  au moment de l'écriture — premier passage à valider.
+- Le `.dmg` produit par la CI GitHub Actions ne tourne que sur macOS
+  aussi récent (ou plus récent) que le runner GitHub qui l'a compilé (voir
+  encadré dans "Compiler pour macOS" ci-dessus) — pour un Mac plus ancien,
+  compiler directement dessus (section "Manuellement, sur un Mac").
 - Un backend caméra UVC générique (webcam standard) ou carte de capture HDMI
   peut être ajouté en implémentant `CameraBackend`, sans toucher à l'UI.
 - Pas de tests automatisés pour l'instant (l'essentiel de la logique métier
