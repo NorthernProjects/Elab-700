@@ -206,40 +206,25 @@ jobs:
           $ARCH_PREFIX cmake --build "$RUNNER_TEMP/qtbase-build" --parallel "$(sysctl -n hw.logicalcpu)"
           $ARCH_PREFIX cmake --install "$RUNNER_TEMP/qtbase-build"
 
-      - name: Build macdeployqt from source (qttools), targeting old macOS
-        env:
-          QT_VERSION: "6.11.2"
+      - name: Locate macdeployqt
+        # A full qttools build (Linguist, Designer, Assistant, qdbus tools,
+        # qtdiag, 637 targets) came back with macdeployqt nowhere in it —
+        # `find -iname '*macdeployqt*'` on that build tree found literally
+        # nothing. macdeployqt is actually a qtbase tool (src/macdeployqt),
+        # not a qttools one, so it should already be sitting in
+        # $QT_INSTALL_PREFIX/bin from the qtbase install two steps ago. If
+        # it isn't, search the qtbase build tree (still on disk) to find out
+        # where it actually ended up instead of guessing again.
         run: |
-          set -euxo pipefail
-          curl -fL "https://download.qt.io/official_releases/qt/6.11/${QT_VERSION}/submodules/qttools-everywhere-src-${QT_VERSION}.tar.xz" \
-            -o "$RUNNER_TEMP/qttools.tar.xz"
-          tar xf "$RUNNER_TEMP/qttools.tar.xz" -C "$RUNNER_TEMP/qt-src"
-
-          $ARCH_PREFIX "$QT_INSTALL_PREFIX/bin/qt-cmake" \
-            -S "$RUNNER_TEMP/qt-src/qttools-everywhere-src-${QT_VERSION}" -B "$RUNNER_TEMP/qttools-build" -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
-            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
-            -DCMAKE_PREFIX_PATH="$BREW_PREFIX" \
-            -DQT_NO_APPLE_SDK_AND_XCODE_CHECK=ON \
-            -DFEATURE_clang=OFF
-
-          # `--target macdeployqt` doesn't exist under that exact name (ninja
-          # confirmed: "unknown target 'macdeployqt'") — rather than guess
-          # the real target name, just build everything qttools' own
-          # configure step decided to include (it already skips tools that
-          # need modules we don't have, like qtdeclarative, without
-          # failing) and locate the resulting binary afterwards.
-          $ARCH_PREFIX cmake --build "$RUNNER_TEMP/qttools-build" --parallel "$(sysctl -n hw.logicalcpu)"
-
-          MACDEPLOYQT_BIN="$(find "$RUNNER_TEMP/qttools-build" -type f -perm -u+x -name macdeployqt -print -quit)"
-          if [ -z "$MACDEPLOYQT_BIN" ]; then
-            echo "macdeployqt binary not found anywhere under the qttools build tree:" >&2
-            find "$RUNNER_TEMP/qttools-build" -iname '*macdeployqt*' >&2 || true
+          set -x
+          if [ -x "$QT_INSTALL_PREFIX/bin/macdeployqt" ]; then
+            echo "macdeployqt already present (built as part of qtbase)."
+          else
+            echo "Not found after qtbase install — searching the qtbase build tree:" >&2
+            find "$RUNNER_TEMP/qtbase-build" -iname '*macdeployqt*' >&2 || true
+            find "$QT_INSTALL_PREFIX" -iname '*macdeployqt*' >&2 || true
             exit 1
           fi
-          echo "Found macdeployqt at: $MACDEPLOYQT_BIN"
-          cp "$MACDEPLOYQT_BIN" "$QT_INSTALL_PREFIX/bin/macdeployqt"
 
       - name: Generate the .icns app icon for this branding
         run: |
