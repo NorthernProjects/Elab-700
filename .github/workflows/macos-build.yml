@@ -107,8 +107,14 @@ jobs:
         # for both architectures, and put it on PATH ahead of anything else.
         run: |
           set -euxo pipefail
+          # grep -m1 would exit (and close the pipe) as soon as it sees a
+          # match, before curl finishes writing the rest of the response —
+          # under `pipefail` that SIGPIPE fails the whole command even
+          # though the value we wanted was already captured correctly. Let
+          # grep read the whole (small) response instead, then take the
+          # first match with head.
           CMAKE_VERSION="$(curl -fsSL https://api.github.com/repos/Kitware/CMake/releases/latest \
-            | grep -m1 '"tag_name"' | cut -d'"' -f4 | sed 's/^v//')"
+            | grep '"tag_name"' | head -1 | cut -d'"' -f4 | sed 's/^v//')"
           curl -fL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-macos-universal.tar.gz" \
             -o "$RUNNER_TEMP/cmake.tar.gz"
           mkdir -p "$RUNNER_TEMP/cmake"
