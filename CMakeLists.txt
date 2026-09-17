@@ -33,7 +33,7 @@ option(E_LAB_SCHOOL_BRANDING "Use the Ruelle de l'avenir logo/icon instead of th
 # ---------------------------------------------------------------------------
 # Dependencies
 # ---------------------------------------------------------------------------
-find_package(Qt6 REQUIRED COMPONENTS Widgets Multimedia Concurrent)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Concurrent)
 find_package(OpenCV REQUIRED COMPONENTS core imgcodecs imgproc videoio)
 
 # ---------------------------------------------------------------------------
@@ -220,7 +220,6 @@ endif()
 
 target_link_libraries(MicroscopeLab PRIVATE
     Qt6::Widgets
-    Qt6::Multimedia
     Qt6::Concurrent
     ${OpenCV_LIBS}
 )
