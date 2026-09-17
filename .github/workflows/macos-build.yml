@@ -12,9 +12,9 @@ name: Build macOS installers
 # from the arm64 runner instead of waiting for an Intel runner:
 #   - a second, Intel-only Homebrew is installed under Rosetta 2 at
 #     /usr/local (the classic Intel prefix; /opt/homebrew stays arm64-only)
-#   - OpenCV/dylibbundler (and Qt's own non-Qt dependencies) are installed
-#     from THAT Homebrew, so dylibbundler ends up x86_64 Mach-O — macOS runs
-#     it transparently via Rosetta, no special invocation needed
+#   - dylibbundler (and Qt's own non-Qt dependencies) are installed from
+#     THAT Homebrew, so dylibbundler ends up x86_64 Mach-O — macOS runs it
+#     transparently via Rosetta, no special invocation needed
 #   - CMAKE_OSX_ARCHITECTURES=x86_64 tells the (arch-agnostic) Apple clang
 #     to emit x86_64 object code regardless of the host being arm64
 #
@@ -42,9 +42,20 @@ name: Build macOS installers
 #    upstream source and invoke cmake directly, so our own
 #    -DCMAKE_OSX_DEPLOYMENT_TARGET (matching CMakeLists.txt) actually takes
 #    effect. Homebrew is still used normally for qtbase's own non-Qt
-#    dependency libraries and for OpenCV/dylibbundler — neither showed this
+#    dependency libraries and for dylibbundler — neither showed this
 #    problem. This is also why the job timeout below is generous: building
 #    Qt from source easily takes over an hour.
+# 3. Homebrew's `opencv` formula builds every optional module (dnn, ml,
+#    calib3d, stitching, gapi, FFmpeg + its whole codec chain, Tesseract
+#    OCR, protobuf/onnx, OpenVINO, VTK, ...). That's fine when a bottle
+#    exists, but on the x86_64 leg (no more routine Intel bottles either,
+#    same Tier 3 policy) it meant compiling all of it from source under
+#    Rosetta — over 3 hours on a single step with no end in sight. Our own
+#    CMakeLists.txt only asks for 4 modules (core, imgcodecs, imgproc,
+#    videoio), so OpenCV is now built from its own upstream source the same
+#    way as Qt above, with BUILD_LIST pruning everything else and
+#    WITH_FFMPEG=OFF (native AVFoundation handles camera capture and video
+#    writing on macOS) dropping the single heaviest dependency chain.
 #
 # Runs on every push to main and can be triggered manually from the Actions
 # tab (workflow_dispatch) to rebuild on demand without pushing a commit.
@@ -152,22 +163,64 @@ jobs:
         # source, invoking cmake ourselves — outside Homebrew's superenv,
         # our own -DCMAKE_OSX_DEPLOYMENT_TARGET actually takes effect.
         # Homebrew is still used normally here for qtbase's own (non-Qt)
-        # dependency libraries, and for OpenCV/dylibbundler — none of those
-        # exhibited this symbol problem.
+        # dependency libraries, and for dylibbundler — neither exhibited
+        # this symbol problem.
         run: |
           $ARCH_PREFIX "$BREW_BIN" install --verbose cmake ninja pkgconf \
             brotli dbus double-conversion freetype glib harfbuzz "icu4c@78" \
             jpeg-turbo libb2 libpng md4c "openssl@3" pcre2 zstd
 
-      - name: Install OpenCV + dylibbundler (Homebrew)
-        # Split out from the step above so its log actually shows up while
-        # still running — GitHub only serves a step's log once that step
-        # completes, and OpenCV can be slow to build from source (no more
-        # routine Intel bottles per Homebrew's Tier 3 policy), so lumping it
-        # into one step left us with zero visibility for over an hour on the
-        # x86_64 leg with no way to tell progress from a hang.
+      - name: Install dylibbundler (Homebrew)
         run: |
-          $ARCH_PREFIX "$BREW_BIN" install --verbose opencv dylibbundler
+          $ARCH_PREFIX "$BREW_BIN" install --verbose dylibbundler
+
+      - name: Build a minimal OpenCV from source, targeting old macOS
+        # Homebrew's opencv formula builds EVERYTHING (dnn, ml, calib3d,
+        # stitching, gapi, FFmpeg + its whole codec chain x264/x265/dav1d/
+        # svt-av1/libvpx/opus, Tesseract OCR, protobuf/onnx, OpenVINO,
+        # VTK, ...) — on the x86_64/Rosetta leg, with no more routine Intel
+        # bottles (Homebrew Tier 3), that meant building all of it from
+        # source and blew well past 3 hours on a single step with no end in
+        # sight. Our own CMakeLists.txt only ever asks for
+        # `find_package(OpenCV REQUIRED COMPONENTS core imgcodecs imgproc
+        # videoio)` — four modules — so build only those ourselves, the same
+        # way the Qt steps above build only what we need. BUILD_LIST prunes
+        # the huge unneeded module graph, and WITH_FFMPEG=OFF (relying on
+        # the native AVFoundation backend for camera capture and video
+        # writing on macOS) drops the single heaviest dependency chain.
+        env:
+          OPENCV_VERSION: "4.10.0"
+        run: |
+          set -euxo pipefail
+          curl -fL "https://github.com/opencv/opencv/archive/refs/tags/${OPENCV_VERSION}.tar.gz" \
+            -o "$RUNNER_TEMP/opencv.tar.gz"
+          mkdir -p "$RUNNER_TEMP/opencv-src"
+          tar xf "$RUNNER_TEMP/opencv.tar.gz" -C "$RUNNER_TEMP/opencv-src"
+
+          OPENCV_INSTALL_PREFIX="$RUNNER_TEMP/opencv-install"
+          echo "OPENCV_INSTALL_PREFIX=$OPENCV_INSTALL_PREFIX" >> "$GITHUB_ENV"
+
+          $ARCH_PREFIX cmake -S "$RUNNER_TEMP/opencv-src/opencv-${OPENCV_VERSION}" -B "$RUNNER_TEMP/opencv-build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$OPENCV_INSTALL_PREFIX" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
+            -DBUILD_LIST=core,imgproc,imgcodecs,videoio \
+            -DBUILD_opencv_apps=OFF \
+            -DBUILD_EXAMPLES=OFF \
+            -DBUILD_TESTS=OFF \
+            -DBUILD_PERF_TESTS=OFF \
+            -DBUILD_DOCS=OFF \
+            -DBUILD_JAVA=OFF \
+            -DBUILD_opencv_python2=OFF \
+            -DBUILD_opencv_python3=OFF \
+            -DWITH_FFMPEG=OFF \
+            -DWITH_AVFOUNDATION=ON \
+            -DWITH_QT=OFF \
+            -DWITH_GTK=OFF
+
+          $ARCH_PREFIX cmake --build "$RUNNER_TEMP/opencv-build" --parallel "$(sysctl -n hw.logicalcpu)"
+          $ARCH_PREFIX cmake --install "$RUNNER_TEMP/opencv-build"
 
       - name: Build Qt (qtbase) from source, targeting old macOS
         env:
@@ -251,7 +304,7 @@ jobs:
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} \
             -DE_LAB_SCHOOL_BRANDING=${{ matrix.branding_flag }} \
             -DCMAKE_PREFIX_PATH="$QT_INSTALL_PREFIX" \
-            -DOpenCV_DIR="$BREW_PREFIX/opt/opencv/lib/cmake/opencv4"
+            -DOpenCV_DIR="$OPENCV_INSTALL_PREFIX/lib/cmake/opencv4"
 
       - name: Build
         run: cmake --build build --config Release -j"$(sysctl -n hw.logicalcpu)"
