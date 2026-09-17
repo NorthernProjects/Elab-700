@@ -92,6 +92,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install cmake (official Kitware binary, avoids Homebrew's curl->openssl build)
+        # Homebrew's cmake formula depends on curl, and Homebrew's curl formula
+        # depends on openssl@3 — so removing our own explicit openssl@3 line
+        # (see the Homebrew deps step below) didn't help: `brew install cmake`
+        # still pulled it in transitively. Under Homebrew Tier 3 (no routine
+        # Intel bottles), openssl's formula compiles its own full test suite
+        # (several hundred .c files) alongside the library itself, which alone
+        # blew this step past 45 minutes on the x86_64 leg across five
+        # consecutive runs, all while nothing in this project's own code
+        # needs cmake to have been built with curl/SSL support at all.
+        # Kitware ships a self-contained "universal" (arm64+x86_64 fat)
+        # binary release that needs nothing from Homebrew — use that instead,
+        # for both architectures, and put it on PATH ahead of anything else.
+        run: |
+          set -euxo pipefail
+          CMAKE_VERSION="$(curl -fsSL https://api.github.com/repos/Kitware/CMake/releases/latest \
+            | grep -m1 '"tag_name"' | cut -d'"' -f4 | sed 's/^v//')"
+          curl -fL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-macos-universal.tar.gz" \
+            -o "$RUNNER_TEMP/cmake.tar.gz"
+          mkdir -p "$RUNNER_TEMP/cmake"
+          tar xf "$RUNNER_TEMP/cmake.tar.gz" -C "$RUNNER_TEMP/cmake"
+          CMAKE_BIN_DIR="$(dirname "$(find "$RUNNER_TEMP/cmake" -type f -name cmake -perm -u+x | head -1)")"
+          echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
+
       - name: Set up Homebrew prefix for this architecture
         run: |
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
@@ -165,21 +189,25 @@ jobs:
         # Homebrew is still used normally here for qtbase's own (non-Qt)
         # dependency libraries, and for dylibbundler — neither exhibited
         # this symbol problem.
-        # dbus, glib and openssl are deliberately absent here. dbus/glib
-        # would only be for QtDBus and Qt's optional glib event-dispatcher;
-        # openssl would only be for QtNetwork's TLS backend — none of this
-        # app's code touches networking, TLS, or D-Bus (CMakeLists.txt
-        # links only Widgets + Concurrent; see FEATURE_dbus/FEATURE_glib/
-        # FEATURE_ssl=OFF in the Qt build step below), and glib's mainloop
-        # integration is a Linux/embedded concern, not a macOS one. Under
-        # Homebrew Tier 3 none of the three reliably has an Intel bottle,
-        # so when one's missing Homebrew compiles it from source — glib
-        # (600+ translation units) and openssl (its full test suite, several
-        # hundred more .c files, built by default alongside the library)
-        # each independently blew this step past 45 minutes, four runs in a
-        # row on the x86_64 leg with no other job affected.
+        # dbus and glib are deliberately absent here — they'd only be for
+        # QtDBus and Qt's optional glib event-dispatcher, and none of this
+        # app's code touches D-Bus (CMakeLists.txt links only Widgets +
+        # Concurrent; see FEATURE_dbus/FEATURE_glib=OFF in the Qt build step
+        # below). glib's mainloop integration is also a Linux/embedded
+        # concern, not a macOS one. Under Homebrew Tier 3 neither reliably
+        # has an Intel bottle, and when missing, Homebrew compiles glib from
+        # source (600+ translation units) — enough on its own to blow this
+        # step past 45 minutes on the x86_64 leg. openssl@3 is absent too,
+        # but NOT because we stopped asking for it here: `brew install cmake`
+        # itself transitively depends on it (via curl), so simply removing
+        # our own explicit "openssl@3" from this line changed nothing — the
+        # step kept stalling compiling openssl's full test suite (several
+        # hundred more .c files, built by default alongside the library).
+        # The real fix is the "Install cmake" step above, which replaces
+        # Homebrew's cmake (and therefore its whole curl→openssl dependency
+        # chain) with Kitware's own prebuilt binary.
         run: |
-          $ARCH_PREFIX "$BREW_BIN" install --verbose cmake ninja pkgconf \
+          $ARCH_PREFIX "$BREW_BIN" install --verbose ninja pkgconf \
             brotli double-conversion freetype harfbuzz "icu4c@78" \
             jpeg-turbo libb2 libpng md4c pcre2 zstd
 
@@ -228,12 +256,7 @@ jobs:
           # under Rosetta while cross-compiling to x86_64 — it's just an
           # orchestrator here, and Apple clang is architecture-agnostic
           # (only needs the -arch flag), exactly like the app's own
-          # Configure/Build steps below. Forcing `arch -x86_64` on plain
-          # `cmake` did crash instantly ("Bad CPU type in executable"),
-          # because PATH resolves it to this runner's native arm64 Homebrew
-          # install (no x86_64 slice) rather than the x86_64-only one under
-          # /usr/local — simplest fix here was just to drop the forcing
-          # entirely rather than also qualify the path.
+          # Configure/Build steps below.
           cmake -S "$RUNNER_TEMP/opencv-src/opencv-${OPENCV_VERSION}" -B "$RUNNER_TEMP/opencv-build" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$OPENCV_INSTALL_PREFIX" \
@@ -285,13 +308,12 @@ jobs:
           # refuses to configure without QT_HOST_PATH ("You need to set
           # QT_HOST_PATH to cross compile Qt") the moment cmake itself runs
           # natively as arm64 while targeting x86_64 — it needs to run AS
-          # x86_64 (so it sees host == target and skips that check), same
-          # as this whole job's Homebrew calls. Unlike the earlier crash
-          # ("Bad CPU type in executable"), forcing arch on the *explicit*
-          # x86_64 cmake binary (rather than plain `cmake`, which PATH
-          # resolves to this runner's native arm64 Homebrew install first)
-          # works fine, since that binary genuinely has an x86_64 slice.
-          $ARCH_PREFIX "$BREW_PREFIX/bin/cmake" -S "$QT_SRC_DIR/qtbase-everywhere-src-${QT_VERSION}" -B "$RUNNER_TEMP/qtbase-build" -G Ninja \
+          # x86_64 (so it sees host == target and skips that check). Plain
+          # `cmake` now resolves (via the "Install cmake" step's PATH entry)
+          # to Kitware's universal binary, which has a real x86_64 slice, so
+          # `arch -x86_64 cmake` runs it correctly instead of crashing the
+          # way it did against this runner's old arm64-only Homebrew cmake.
+          $ARCH_PREFIX cmake -S "$QT_SRC_DIR/qtbase-everywhere-src-${QT_VERSION}" -B "$RUNNER_TEMP/qtbase-build" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$QT_INSTALL_PREFIX" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
@@ -314,8 +336,8 @@ jobs:
             -DFEATURE_glib=OFF \
             -DFEATURE_ssl=OFF
 
-          $ARCH_PREFIX "$BREW_PREFIX/bin/cmake" --build "$RUNNER_TEMP/qtbase-build" --parallel "$(sysctl -n hw.logicalcpu)"
-          $ARCH_PREFIX "$BREW_PREFIX/bin/cmake" --install "$RUNNER_TEMP/qtbase-build"
+          $ARCH_PREFIX cmake --build "$RUNNER_TEMP/qtbase-build" --parallel "$(sysctl -n hw.logicalcpu)"
+          $ARCH_PREFIX cmake --install "$RUNNER_TEMP/qtbase-build"
 
       - name: Locate macdeployqt
         # A full qttools build (Linguist, Designer, Assistant, qdbus tools,
