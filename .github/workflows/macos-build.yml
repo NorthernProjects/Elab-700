@@ -200,16 +200,19 @@ jobs:
           OPENCV_INSTALL_PREFIX="$RUNNER_TEMP/opencv-install"
           echo "OPENCV_INSTALL_PREFIX=$OPENCV_INSTALL_PREFIX" >> "$GITHUB_ENV"
 
-          # No $ARCH_PREFIX here: cmake/ninja are just build orchestrators,
-          # not something that needs to itself run as x86_64 — forcing that
-          # via `arch -x86_64` crashed instantly ("Bad CPU type in
-          # executable") because plain `cmake` on PATH resolves to this
-          # runner's native arm64 Homebrew install (no x86_64 slice), not
-          # the x86_64-only one under /usr/local. Running cmake/ninja
-          # natively while passing -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
-          # is exactly how the app's own Configure/Build steps below already
-          # cross-compile successfully — Apple clang itself is
-          # architecture-agnostic and just needs the -arch flag.
+          # No $ARCH_PREFIX here: unlike Qt (see the note in the Qt build
+          # step below — it demands QT_HOST_PATH the moment cmake's own
+          # host architecture doesn't match the target), OpenCV's CMake
+          # doesn't care whether cmake itself runs natively (arm64) or
+          # under Rosetta while cross-compiling to x86_64 — it's just an
+          # orchestrator here, and Apple clang is architecture-agnostic
+          # (only needs the -arch flag), exactly like the app's own
+          # Configure/Build steps below. Forcing `arch -x86_64` on plain
+          # `cmake` did crash instantly ("Bad CPU type in executable"),
+          # because PATH resolves it to this runner's native arm64 Homebrew
+          # install (no x86_64 slice) rather than the x86_64-only one under
+          # /usr/local — simplest fix here was just to drop the forcing
+          # entirely rather than also qualify the path.
           cmake -S "$RUNNER_TEMP/opencv-src/opencv-${OPENCV_VERSION}" -B "$RUNNER_TEMP/opencv-build" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$OPENCV_INSTALL_PREFIX" \
@@ -254,10 +257,18 @@ jobs:
             QT_DEPS_PREFIX_PATH="$QT_DEPS_PREFIX_PATH;$($ARCH_PREFIX "$BREW_BIN" --prefix "$dep")"
           done
 
-          # No $ARCH_PREFIX on cmake here either — see the note in the
-          # OpenCV build step above ("Bad CPU type in executable" when
-          # forcing x86_64 on the native arm64 cmake resolved via PATH).
-          cmake -S "$QT_SRC_DIR/qtbase-everywhere-src-${QT_VERSION}" -B "$RUNNER_TEMP/qtbase-build" -G Ninja \
+          # Unlike OpenCV above, Qt's own CMake explicitly checks
+          # CMAKE_HOST_SYSTEM_PROCESSOR against CMAKE_OSX_ARCHITECTURES and
+          # refuses to configure without QT_HOST_PATH ("You need to set
+          # QT_HOST_PATH to cross compile Qt") the moment cmake itself runs
+          # natively as arm64 while targeting x86_64 — it needs to run AS
+          # x86_64 (so it sees host == target and skips that check), same
+          # as this whole job's Homebrew calls. Unlike the earlier crash
+          # ("Bad CPU type in executable"), forcing arch on the *explicit*
+          # x86_64 cmake binary (rather than plain `cmake`, which PATH
+          # resolves to this runner's native arm64 Homebrew install first)
+          # works fine, since that binary genuinely has an x86_64 slice.
+          $ARCH_PREFIX "$BREW_PREFIX/bin/cmake" -S "$QT_SRC_DIR/qtbase-everywhere-src-${QT_VERSION}" -B "$RUNNER_TEMP/qtbase-build" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$QT_INSTALL_PREFIX" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
@@ -278,8 +289,8 @@ jobs:
             -DFEATURE_openssl_linked=ON \
             -DFEATURE_relocatable=ON
 
-          cmake --build "$RUNNER_TEMP/qtbase-build" --parallel "$(sysctl -n hw.logicalcpu)"
-          cmake --install "$RUNNER_TEMP/qtbase-build"
+          $ARCH_PREFIX "$BREW_PREFIX/bin/cmake" --build "$RUNNER_TEMP/qtbase-build" --parallel "$(sysctl -n hw.logicalcpu)"
+          $ARCH_PREFIX "$BREW_PREFIX/bin/cmake" --install "$RUNNER_TEMP/qtbase-build"
 
       - name: Locate macdeployqt
         # A full qttools build (Linguist, Designer, Assistant, qdbus tools,
