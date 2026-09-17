@@ -200,7 +200,17 @@ jobs:
           OPENCV_INSTALL_PREFIX="$RUNNER_TEMP/opencv-install"
           echo "OPENCV_INSTALL_PREFIX=$OPENCV_INSTALL_PREFIX" >> "$GITHUB_ENV"
 
-          $ARCH_PREFIX cmake -S "$RUNNER_TEMP/opencv-src/opencv-${OPENCV_VERSION}" -B "$RUNNER_TEMP/opencv-build" -G Ninja \
+          # No $ARCH_PREFIX here: cmake/ninja are just build orchestrators,
+          # not something that needs to itself run as x86_64 — forcing that
+          # via `arch -x86_64` crashed instantly ("Bad CPU type in
+          # executable") because plain `cmake` on PATH resolves to this
+          # runner's native arm64 Homebrew install (no x86_64 slice), not
+          # the x86_64-only one under /usr/local. Running cmake/ninja
+          # natively while passing -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
+          # is exactly how the app's own Configure/Build steps below already
+          # cross-compile successfully — Apple clang itself is
+          # architecture-agnostic and just needs the -arch flag.
+          cmake -S "$RUNNER_TEMP/opencv-src/opencv-${OPENCV_VERSION}" -B "$RUNNER_TEMP/opencv-build" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$OPENCV_INSTALL_PREFIX" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
@@ -219,8 +229,8 @@ jobs:
             -DWITH_QT=OFF \
             -DWITH_GTK=OFF
 
-          $ARCH_PREFIX cmake --build "$RUNNER_TEMP/opencv-build" --parallel "$(sysctl -n hw.logicalcpu)"
-          $ARCH_PREFIX cmake --install "$RUNNER_TEMP/opencv-build"
+          cmake --build "$RUNNER_TEMP/opencv-build" --parallel "$(sysctl -n hw.logicalcpu)"
+          cmake --install "$RUNNER_TEMP/opencv-build"
 
       - name: Build Qt (qtbase) from source, targeting old macOS
         env:
@@ -244,7 +254,10 @@ jobs:
             QT_DEPS_PREFIX_PATH="$QT_DEPS_PREFIX_PATH;$($ARCH_PREFIX "$BREW_BIN" --prefix "$dep")"
           done
 
-          $ARCH_PREFIX cmake -S "$QT_SRC_DIR/qtbase-everywhere-src-${QT_VERSION}" -B "$RUNNER_TEMP/qtbase-build" -G Ninja \
+          # No $ARCH_PREFIX on cmake here either — see the note in the
+          # OpenCV build step above ("Bad CPU type in executable" when
+          # forcing x86_64 on the native arm64 cmake resolved via PATH).
+          cmake -S "$QT_SRC_DIR/qtbase-everywhere-src-${QT_VERSION}" -B "$RUNNER_TEMP/qtbase-build" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX="$QT_INSTALL_PREFIX" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
@@ -265,8 +278,8 @@ jobs:
             -DFEATURE_openssl_linked=ON \
             -DFEATURE_relocatable=ON
 
-          $ARCH_PREFIX cmake --build "$RUNNER_TEMP/qtbase-build" --parallel "$(sysctl -n hw.logicalcpu)"
-          $ARCH_PREFIX cmake --install "$RUNNER_TEMP/qtbase-build"
+          cmake --build "$RUNNER_TEMP/qtbase-build" --parallel "$(sysctl -n hw.logicalcpu)"
+          cmake --install "$RUNNER_TEMP/qtbase-build"
 
       - name: Locate macdeployqt
         # A full qttools build (Linguist, Designer, Assistant, qdbus tools,
@@ -324,7 +337,14 @@ jobs:
         # launch ("Library not loaded: @rpath/libopencv_core.500.dylib").
         # Passing every already-bundled .dylib/.so as an extra -x target
         # makes dylibbundler fix those internal references too, not just
-        # the main executable's.
+        # the main executable's. -s gives it our OpenCV install's lib/ dir
+        # as an explicit fallback search path — without it, dylibbundler hit
+        # a known failure mode against our own from-source OpenCV build
+        # (versioned dylib symlinks, e.g. libopencv_videoio.410.dylib ->
+        # libopencv_videoio.4.10.0.dylib): unable to resolve one from the
+        # embedded path alone, it printed "does not exist. Try again" in an
+        # infinite loop instead of failing, once spamming gigabytes of log
+        # over an hour with the job never progressing.
         run: |
           EXTRA_TARGETS=()
           while IFS= read -r -d '' lib; do
@@ -335,6 +355,7 @@ jobs:
           "$BREW_PREFIX/bin/dylibbundler" -od -b \
             -x build/E-Lab700.app/Contents/MacOS/E-Lab700 \
             "${EXTRA_TARGETS[@]}" \
+            -s "$OPENCV_INSTALL_PREFIX/lib" \
             -d build/E-Lab700.app/Contents/libs \
             -p @executable_path/../libs
 
