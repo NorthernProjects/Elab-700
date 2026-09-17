@@ -165,20 +165,23 @@ jobs:
         # Homebrew is still used normally here for qtbase's own (non-Qt)
         # dependency libraries, and for dylibbundler — neither exhibited
         # this symbol problem.
-        # dbus and glib are deliberately absent here: they'd only be for
-        # QtDBus and Qt's optional glib event-dispatcher, neither of which
-        # this app uses (CMakeLists.txt links only Widgets + Concurrent,
-        # and glib's mainloop integration is a Linux/embedded concern, not
-        # a macOS one — see FEATURE_dbus/FEATURE_glib=OFF in the Qt build
-        # step below). Under Homebrew Tier 3 neither package reliably has
-        # an Intel bottle, so when one's missing Homebrew compiles glib
-        # from source — over 600 translation units — which alone blew past
-        # 45 minutes on this step with no other job affected, three runs in
-        # a row on the x86_64 leg.
+        # dbus, glib and openssl are deliberately absent here. dbus/glib
+        # would only be for QtDBus and Qt's optional glib event-dispatcher;
+        # openssl would only be for QtNetwork's TLS backend — none of this
+        # app's code touches networking, TLS, or D-Bus (CMakeLists.txt
+        # links only Widgets + Concurrent; see FEATURE_dbus/FEATURE_glib/
+        # FEATURE_ssl=OFF in the Qt build step below), and glib's mainloop
+        # integration is a Linux/embedded concern, not a macOS one. Under
+        # Homebrew Tier 3 none of the three reliably has an Intel bottle,
+        # so when one's missing Homebrew compiles it from source — glib
+        # (600+ translation units) and openssl (its full test suite, several
+        # hundred more .c files, built by default alongside the library)
+        # each independently blew this step past 45 minutes, four runs in a
+        # row on the x86_64 leg with no other job affected.
         run: |
           $ARCH_PREFIX "$BREW_BIN" install --verbose cmake ninja pkgconf \
             brotli double-conversion freetype harfbuzz "icu4c@78" \
-            jpeg-turbo libb2 libpng md4c "openssl@3" pcre2 zstd
+            jpeg-turbo libb2 libpng md4c pcre2 zstd
 
       - name: Install dylibbundler (Homebrew)
         run: |
@@ -269,11 +272,11 @@ jobs:
             -o "$RUNNER_TEMP/qtbase.tar.xz"
           tar xf "$RUNNER_TEMP/qtbase.tar.xz" -C "$QT_SRC_DIR"
 
-          # icu4c/openssl/etc are keg-only in Homebrew (not symlinked into
+          # icu4c/etc are keg-only in Homebrew (not symlinked into
           # $BREW_PREFIX/lib) — collect each one's own prefix so CMake can
           # actually find them, the same way Homebrew's own formula does.
           QT_DEPS_PREFIX_PATH="$BREW_PREFIX"
-          for dep in icu4c@78 openssl@3 zstd pcre2 double-conversion freetype harfbuzz jpeg-turbo libpng libb2 md4c brotli; do
+          for dep in icu4c@78 zstd pcre2 double-conversion freetype harfbuzz jpeg-turbo libpng libb2 md4c brotli; do
             QT_DEPS_PREFIX_PATH="$QT_DEPS_PREFIX_PATH;$($ARCH_PREFIX "$BREW_BIN" --prefix "$dep")"
           done
 
@@ -306,10 +309,10 @@ jobs:
             -DFEATURE_system_sqlite=ON \
             -DFEATURE_system_zlib=ON \
             -DFEATURE_sql_mysql=OFF -DFEATURE_sql_odbc=OFF -DFEATURE_sql_psql=OFF \
-            -DFEATURE_openssl_linked=ON \
             -DFEATURE_relocatable=ON \
             -DFEATURE_dbus=OFF \
-            -DFEATURE_glib=OFF
+            -DFEATURE_glib=OFF \
+            -DFEATURE_ssl=OFF
 
           $ARCH_PREFIX "$BREW_PREFIX/bin/cmake" --build "$RUNNER_TEMP/qtbase-build" --parallel "$(sysctl -n hw.logicalcpu)"
           $ARCH_PREFIX "$BREW_PREFIX/bin/cmake" --install "$RUNNER_TEMP/qtbase-build"
