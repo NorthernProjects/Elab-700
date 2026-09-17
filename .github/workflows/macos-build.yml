@@ -188,6 +188,14 @@ jobs:
         # the huge unneeded module graph, and WITH_FFMPEG=OFF (relying on
         # the native AVFoundation backend for camera capture and video
         # writing on macOS) drops the single heaviest dependency chain.
+        # BUILD_LIST alone doesn't stop OpenCV's module-registration phase
+        # from still reaching into gapi/ and videoio/'s init.cmake for every
+        # module under modules/ before the exclusion is applied, and both
+        # unconditionally try to fetch an optional third-party SDK over the
+        # network (gapi's ADE framework, videoio's OrbbecSDK for a camera
+        # backend we don't use) — a single DNS hiccup there hard-fails the
+        # whole configure step. WITH_ADE=OFF / WITH_OBSENSOR=OFF turn off
+        # those fetches outright since we never link either dependency.
         env:
           OPENCV_VERSION: "4.10.0"
         run: |
@@ -230,7 +238,9 @@ jobs:
             -DWITH_FFMPEG=OFF \
             -DWITH_AVFOUNDATION=ON \
             -DWITH_QT=OFF \
-            -DWITH_GTK=OFF
+            -DWITH_GTK=OFF \
+            -DWITH_ADE=OFF \
+            -DWITH_OBSENSOR=OFF
 
           cmake --build "$RUNNER_TEMP/opencv-build" --parallel "$(sysctl -n hw.logicalcpu)"
           cmake --install "$RUNNER_TEMP/opencv-build"
