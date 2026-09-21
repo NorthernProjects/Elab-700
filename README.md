@@ -232,6 +232,40 @@ les anciens scripts des variantes séparées, conservés pour référence.)
 Distribué sous licence MIT (voir `LICENSE`) — libre à vous de le partager, le
 modifier, l'adapter à votre propre microscope.
 
+## Version Windows 7 (32 bits, Qt 5.15)
+
+Qt 6 exige Windows 10 minimum, donc une version « ancienne » est produite à
+part, à partir du **même code source** : compilée contre **Qt 5.15** (dernier
+Qt compatible Windows 7) en **32 bits** (tourne sur Windows 7 SP1 32 ET 64
+bits). OpenCV doit aussi être compilé en 32 bits (les binaires officiels sont
+64 bits uniquement) ; le runtime C/C++ (VC++ + Universal CRT) est livré avec
+l'application, donc rien à installer sur le PC.
+
+```powershell
+# 1. Qt 5.15 32 bits (pip install aqtinstall)
+python -m aqt install-qt windows desktop 5.15.2 win32_msvc2019 -O C:\Qt
+# 2. OpenCV 4.10 en 32 bits, modules minimaux (sources dans C:\opencv-src)
+cmake -S opencv-4.10.0 -B build-x86 -G "Visual Studio 17 2022" -A Win32 -DCMAKE_INSTALL_PREFIX=C:/opencv-x86 `
+  -DBUILD_LIST=core,imgproc,imgcodecs,videoio -DBUILD_opencv_world=OFF -DWITH_MSMF=OFF -DWITH_FFMPEG=OFF `
+  -DWITH_IPP=OFF -DWITH_OPENCL=OFF -DCPU_BASELINE=SSE2 -DCPU_DISPATCH= -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_EXAMPLES=OFF
+cmake --build build-x86 --config Release --target install
+# 3. L'application
+cmake -S . -B build-win7 -G "Visual Studio 17 2022" -A Win32 -DE_LAB_QT5=ON -DE_LAB_SCHOOL_BRANDING=ON `
+  -DCMAKE_PREFIX_PATH=C:/Qt/5.15.2/msvc2019 -DOpenCV_DIR=C:/opencv-x86
+cmake --build build-win7 --config Release
+# 4. Déploiement : windeployqt (Qt 5) + DLL OpenCV + runtime app-local
+windeployqt --release --no-opengl-sw --no-angle --translations fr,en build-win7\Release\E-Lab700.exe
+#    copier opencv_*4100.dll (C:\opencv-x86\x86\vc17\bin), les DLL de VC\Redist\...\x86\Microsoft.VC143.CRT
+#    (sauf vccorlib140 et msvcp140_atomic_wait) et Windows Kits\10\Redist\ucrt\DLLs\x86
+ISCC installer\MicroscopeLabRuelleWin7.iss
+```
+
+Vérifications faites sans PC Windows 7 sous la main : tous les binaires livrés
+sont bien x86, et aucun n'importe de fonction Windows 8/10 (scan des imports
+avec `pefile`) ; le test de lancement réel n'a été fait que sous Windows 11.
+À valider sur un vrai Windows 7. Limites : Windows 7 n'a pas les emoji couleur
+(les pictogrammes des boutons s'afficheront en noir et blanc ou en carrés).
+
 ## Compiler pour macOS
 
 Le code est cross-platform (`UvcCameraBackend` utilise DirectShow sur Windows

@@ -135,6 +135,9 @@ void CaptureManager::takePhoto()
         QFile sidecar(sidecarPath);
         if (sidecar.open(QFile::WriteOnly | QFile::Text)) {
             QTextStream out(&sidecar);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            out.setCodec("UTF-8"); // Qt 6 already defaults to UTF-8
+#endif
             out << QStringLiteral("Fichier : %1\n").arg(QFileInfo(path).fileName());
             out << QStringLiteral("Date : %1\n")
                        .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss")));

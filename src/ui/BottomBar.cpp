@@ -3,6 +3,7 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QStyle>
+#include <QVariant>
 
 namespace {
 
@@ -112,7 +113,7 @@ void BottomBar::setZoomPercent(int percent)
 void BottomBar::setRecording(bool recording)
 {
     m_videoButton->setText(recording ? QStringLiteral("🔴\nStop") : QStringLiteral("🎥\nVidéo"));
-    m_videoButton->setProperty("recording", recording);
+    m_videoButton->setProperty("recording", QVariant(recording));
     m_videoButton->style()->unpolish(m_videoButton);
     m_videoButton->style()->polish(m_videoButton);
 }

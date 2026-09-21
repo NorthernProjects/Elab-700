@@ -27,7 +27,7 @@ qreal randomUnit()
 // shrinks the logo gently while the app loads.
 qreal breathingScale(qreal elapsedMs)
 {
-    return 1.0 + 0.05 * std::sin(2.0 * M_PI * elapsedMs / kBreathingPeriodMs);
+    return 1.0 + 0.05 * std::sin(2.0 * 3.14159265358979323846 * elapsedMs / kBreathingPeriodMs);
 }
 }
 

@@ -15,8 +15,8 @@ QString loadThemeStylesheet(bool light)
     QFile file(light ? QStringLiteral(":/theme/light.qss") : QStringLiteral(":/theme/dark.qss"));
     if (!file.open(QFile::ReadOnly | QFile::Text))
         return {};
-    QTextStream stream(&file);
-    return stream.readAll();
+    // Explicit UTF-8 (QTextStream's default codec differs between Qt 5 and 6).
+    return QString::fromUtf8(file.readAll());
 }
 
 // Earlier releases of the school edition stored their settings under the

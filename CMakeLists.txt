@@ -33,7 +33,31 @@ option(E_LAB_SCHOOL_BRANDING "Use the Ruelle de l'avenir logo/icon instead of th
 # ---------------------------------------------------------------------------
 # Dependencies
 # ---------------------------------------------------------------------------
-find_package(Qt6 REQUIRED COMPONENTS Widgets Multimedia Concurrent)
+# Legacy Windows 7 build: Qt 6 needs Windows 10+, so the Windows 7 edition is
+# built against Qt 5.15 (last Qt with Windows 7 support) — 32-bit, so it runs
+# on 32-bit AND 64-bit Windows 7. The source stays compatible with both Qt
+# majors (a few QT_VERSION guards); nothing else differs. Example:
+#   cmake -S . -B build-win7 -A Win32 -DE_LAB_QT5=ON -DE_LAB_SCHOOL_BRANDING=ON \
+#         -DCMAKE_PREFIX_PATH=C:/Qt/5.15.2/msvc2019 -DOpenCV_DIR=C:/opencv-x86
+option(E_LAB_QT5 "Build against Qt 5.15 (legacy Windows 7 edition)" OFF)
+
+if(MSVC)
+    # Qt 6's CMake config adds /utf-8 itself; Qt 5's doesn't, and this
+    # project's sources are UTF-8 (accents in string literals).
+    add_compile_options(/utf-8)
+endif()
+
+if(E_LAB_QT5)
+    find_package(Qt5 5.15 REQUIRED COMPONENTS Widgets Concurrent)
+    set(ELAB_QT_LIBS Qt5::Widgets Qt5::Concurrent)
+    if(WIN32)
+        # Target the Windows 7 API surface so nothing newer sneaks in.
+        add_compile_definitions(_WIN32_WINNT=0x0601 WINVER=0x0601)
+    endif()
+else()
+    find_package(Qt6 REQUIRED COMPONENTS Widgets Multimedia Concurrent)
+    set(ELAB_QT_LIBS Qt6::Widgets Qt6::Multimedia Qt6::Concurrent)
+endif()
 find_package(OpenCV REQUIRED COMPONENTS core imgcodecs imgproc videoio)
 
 # ---------------------------------------------------------------------------
@@ -219,9 +243,7 @@ if(APPLE)
 endif()
 
 target_link_libraries(MicroscopeLab PRIVATE
-    Qt6::Widgets
-    Qt6::Multimedia
-    Qt6::Concurrent
+    ${ELAB_QT_LIBS}
     ${OpenCV_LIBS}
 )
 

@@ -4,6 +4,7 @@
 #include <QHBoxLayout>
 #include <QPixmap>
 #include <QStyle>
+#include <QVariant>
 #if defined(Q_OS_MAC)
 #include <QMouseEvent>
 #include <QWindow>
@@ -119,10 +120,10 @@ void TopStatusBar::setConnected(bool connected, const QString &modelName)
         m_connectionButton->setText(modelName.isEmpty()
             ? QStringLiteral("● Caméra connectée")
             : QStringLiteral("● Caméra connectée (%1)").arg(modelName));
-        m_connectionButton->setProperty("connected", true);
+        m_connectionButton->setProperty("connected", QVariant(true));
     } else {
         m_connectionButton->setText(QStringLiteral("● Caméra non connectée"));
-        m_connectionButton->setProperty("connected", false);
+        m_connectionButton->setProperty("connected", QVariant(false));
         m_fpsLabel->setText(QStringLiteral("-- ips"));
         m_resolutionButton->setText(QStringLiteral("--x--"));
     }

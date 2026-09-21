@@ -118,8 +118,7 @@ void applyThemeStylesheet(bool light)
     QFile file(light ? QStringLiteral(":/theme/light.qss") : QStringLiteral(":/theme/dark.qss"));
     if (!file.open(QFile::ReadOnly | QFile::Text))
         return;
-    QTextStream stream(&file);
-    qApp->setStyleSheet(stream.readAll());
+    qApp->setStyleSheet(QString::fromUtf8(file.readAll()));
 }
 
 } // namespace
