@@ -72,6 +72,12 @@ private:
     double m_zoomFactor = 1.0;
     bool m_immersiveMode = false;
     bool m_timeLapseCapturing = false;
+    // Set once the user manually picks a resolution from the top-bar menu:
+    // onCameraConnected() then re-applies m_userChosenResolution on every
+    // later reconnect within this session instead of running
+    // startResolutionAutoTuning() and silently overriding their choice.
+    bool m_userChoseResolution = false;
+    QSize m_userChosenResolution;
     double m_smoothedFocusScore = 0.0;
     double m_lastReportedFps = 0.0;
     QVector<QSize> m_resolutionProbeCandidates;

@@ -14,6 +14,12 @@ namespace {
 // instead and waits for a manual pick (see forceConnect) or the real
 // microscope to appear.
 constexpr long kMinMicroscopeArea = 3000000;
+
+bool looksLikeMicroscope(const CameraDeviceInfo &device)
+{
+    const long area = static_cast<long>(device.resolution.width()) * device.resolution.height();
+    return area >= kMinMicroscopeArea;
+}
 }
 
 CameraManager::CameraManager(QObject *parent) : QObject(parent)
@@ -40,6 +46,16 @@ CameraManager::CameraManager(QObject *parent) : QObject(parent)
 bool CameraManager::isConnected() const
 {
     return m_backend && m_backend->isOpen();
+}
+
+QVector<CameraDeviceInfo> CameraManager::microscopeDevices() const
+{
+    QVector<CameraDeviceInfo> result;
+    for (const CameraDeviceInfo &device : m_devices) {
+        if (looksLikeMicroscope(device))
+            result.append(device);
+    }
+    return result;
 }
 
 void CameraManager::rescan()
@@ -80,7 +96,7 @@ void CameraManager::connectToBestCandidate()
     long bestArea = 0;
     for (const CameraDeviceInfo &device : m_devices) {
         const long area = static_cast<long>(device.resolution.width()) * device.resolution.height();
-        if (area >= kMinMicroscopeArea && area > bestArea) {
+        if (looksLikeMicroscope(device) && area > bestArea) {
             bestArea = area;
             best = &device;
         }

@@ -182,6 +182,20 @@ QMainWindow, QDialog {
     color: #5ce1e6;
 }
 
+#quitButton {
+    background-color: transparent;
+    border: 1px solid #22384d;
+    border-radius: 18px;
+    font-size: 14px;
+    color: #4d6a82;
+}
+
+#quitButton:hover {
+    background-color: #3a1218;
+    border-color: #ff5c6c;
+    color: #ff5c6c;
+}
+
 #BottomBar {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
         stop:0 #0a0f18, stop:1 #10192a);

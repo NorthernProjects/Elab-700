@@ -82,6 +82,15 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     m_helpButton->setToolTip(tr("Aide"));
     m_helpButton->setCursor(Qt::PointingHandCursor);
 
+    // Deliberately to the right of Réglages, not the left, so it's the very
+    // last thing in the row — a quit control shouldn't sit where a stray
+    // click on the settings button is likely.
+    m_quitButton = new QPushButton(QStringLiteral("✕"));
+    m_quitButton->setObjectName("quitButton");
+    m_quitButton->setFixedSize(36, 36);
+    m_quitButton->setToolTip(tr("Quitter"));
+    m_quitButton->setCursor(Qt::PointingHandCursor);
+
     // Left/center/right built as separate containers placed in a 3-column
     // grid with equal outer stretch (see BottomBar for the same technique):
     // this keeps the center column (software/microscope name) at the true
@@ -108,6 +117,7 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     rightLayout->addWidget(m_groupButton);
     rightLayout->addWidget(m_helpButton);
     rightLayout->addWidget(m_teacherButton);
+    rightLayout->addWidget(m_quitButton);
 
     m_layout = new QGridLayout(this);
     m_layout->setContentsMargins(m_baseLeftMargin, 8, 16, 8);
@@ -125,6 +135,7 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     connect(m_connectionButton, &QPushButton::clicked, this, &TopStatusBar::connectionClicked);
     connect(m_helpButton, &QPushButton::clicked, this, &TopStatusBar::helpRequested);
     connect(m_powerButton, &QPushButton::clicked, this, &TopStatusBar::powerToggleRequested);
+    connect(m_quitButton, &QPushButton::clicked, this, &TopStatusBar::quitRequested);
 }
 
 void TopStatusBar::setConnected(bool connected, const QString &modelName)

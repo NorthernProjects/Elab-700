@@ -66,6 +66,7 @@ signals:
     void connectionClicked();
     void helpRequested();
     void powerToggleRequested();
+    void quitRequested();
 
 private:
     QLabel *m_logoLabel;
@@ -77,6 +78,7 @@ private:
     QPushButton *m_resolutionButton;
     QPushButton *m_teacherButton;
     QPushButton *m_helpButton;
+    QPushButton *m_quitButton;
     QGridLayout *m_layout;
     int m_baseLeftMargin = 16;
 };

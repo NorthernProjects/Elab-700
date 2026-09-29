@@ -26,6 +26,12 @@ public:
     // scanning). Mirrors m_manuallyDisconnected — see setPoweredOn().
     bool isPoweredOn() const { return !m_manuallyDisconnected; }
     QVector<CameraDeviceInfo> lastKnownDevices() const { return m_devices; }
+
+    // Same list, filtered down to whatever passes the "looks like the
+    // microscope" resolution threshold (see connectToBestCandidate) — for
+    // the student-facing device picker, which should never offer the
+    // laptop's own low-res webcam as a choice.
+    QVector<CameraDeviceInfo> microscopeDevices() const;
     QString currentDeviceId() const { return m_currentDeviceId; }
 
 public slots:

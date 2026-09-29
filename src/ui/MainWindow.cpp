@@ -292,6 +292,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_topBar, &TopStatusBar::powerToggleRequested, this, [this]() {
         m_cameraManager.setPoweredOn(!m_cameraManager.isPoweredOn());
     });
+    // Goes through close() (not qApp->quit()) so closeEvent()'s PIN check
+    // still applies when student-mode lock is on — a quit button shouldn't
+    // be a bypass for the close button right next to it.
+    connect(m_topBar, &TopStatusBar::quitRequested, this, &QWidget::close);
     connect(m_topBar, &TopStatusBar::helpRequested, this, [this]() {
         HelpDialog dialog(this);
         dialog.exec();
@@ -536,13 +540,22 @@ void MainWindow::onCameraConnected(const CameraDeviceInfo &info)
     // Only the user dragging the slider should ever call setBrightness().
     const int initialBrightness = qMin(backend->brightness(), m_settings.maxBrightnessPercent());
     m_bottomBar->setBrightnessPercent(initialBrightness);
-    // Sharp in the eyepieces but soft on screen usually means the captured
-    // resolution is lower than what's needed to fill the display without
-    // upscaling blur — pick the highest resolution the camera can sustain
-    // at a usable live frame rate automatically, rather than leaving
-    // everyone stuck with whatever conservative default was requested at
-    // open() time.
-    startResolutionAutoTuning();
+    if (m_userChoseResolution) {
+        // Respect the teacher/student's own pick across reconnects instead
+        // of silently overriding it with the auto-tuner below.
+        backend->setResolution(m_userChosenResolution);
+        const QSize applied = backend->currentResolution();
+        m_topBar->setResolution(applied);
+        m_microscopeInfoPanel->setResolution(applied);
+    } else {
+        // Sharp in the eyepieces but soft on screen usually means the
+        // captured resolution is lower than what's needed to fill the
+        // display without upscaling blur — pick the highest resolution the
+        // camera can sustain at a usable live frame rate automatically,
+        // rather than leaving everyone stuck with whatever conservative
+        // default was requested at open() time.
+        startResolutionAutoTuning();
+    }
 }
 
 void MainWindow::onCameraDisconnected()
@@ -567,8 +580,10 @@ void MainWindow::onMicroscopeInfoRequested()
 void MainWindow::onResolutionClicked()
 {
     CameraBackend *backend = m_cameraManager.backend();
-    if (!backend->isOpen())
+    if (!backend->isOpen()) {
+        statusBar()->showMessage(tr("Aucune caméra connectée."), 3000);
         return;
+    }
 
     const QVector<QSize> resolutions = backend->supportedResolutions();
     if (resolutions.isEmpty())
@@ -581,14 +596,30 @@ void MainWindow::onResolutionClicked()
         action->setCheckable(true);
         action->setChecked(size == current);
         connect(action, &QAction::triggered, this, [this, size]() {
+            // A manual pick sticks — startResolutionAutoTuning() (run on
+            // every fresh connect) no longer overrides it on a later
+            // reconnect within this session (see onCameraConnected()).
+            m_userChoseResolution = true;
+            m_userChosenResolution = size;
+
             CameraBackend *liveBackend = m_cameraManager.backend();
             if (!liveBackend->setResolution(size))
                 return;
             const QSize applied = liveBackend->currentResolution();
             m_topBar->setResolution(applied);
             m_microscopeInfoPanel->setResolution(applied);
-            statusBar()->showMessage(
-                tr("Résolution : %1 x %2").arg(applied.width()).arg(applied.height()), 3000);
+            if (applied == size) {
+                statusBar()->showMessage(
+                    tr("Résolution : %1 x %2").arg(applied.width()).arg(applied.height()), 3000);
+            } else {
+                // Some drivers silently ignore an unsupported resolution
+                // instead of failing setResolution() outright — say so
+                // rather than claim success while nothing actually changed.
+                statusBar()->showMessage(
+                    tr("La caméra n'a pas accepté cette résolution (reste à %1 x %2).")
+                        .arg(applied.width()).arg(applied.height()),
+                    5000);
+            }
         });
     }
     menu.exec(QCursor::pos());
@@ -613,7 +644,10 @@ QIcon coloredDotIcon(const QColor &color)
 
 void MainWindow::onConnectionClicked()
 {
-    const QVector<CameraDeviceInfo> devices = m_cameraManager.lastKnownDevices();
+    // Only devices that look like the microscope (see CameraManager::
+    // microscopeDevices) — never the laptop's own webcam, which a student
+    // could otherwise pick by mistake and get confused by.
+    const QVector<CameraDeviceInfo> devices = m_cameraManager.microscopeDevices();
     QMenu menu(this);
 
     // Mirrors the top-bar power button's own red/green state right here,

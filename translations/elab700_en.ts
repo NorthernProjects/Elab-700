@@ -1068,8 +1068,8 @@ Stop</translation>
     <name>MainWindow</name>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="179"/>
-        <location filename="../src/ui/MainWindow.cpp" line="489"/>
-        <location filename="../src/ui/MainWindow.cpp" line="496"/>
+        <location filename="../src/ui/MainWindow.cpp" line="493"/>
+        <location filename="../src/ui/MainWindow.cpp" line="500"/>
         <source>Mode professeur</source>
         <translation>Teacher mode</translation>
     </message>
@@ -1114,118 +1114,128 @@ Stop</translation>
 </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="306"/>
+        <location filename="../src/ui/MainWindow.cpp" line="310"/>
         <source>Photo enregistrée : %1</source>
         <translation>Photo saved: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="316"/>
+        <location filename="../src/ui/MainWindow.cpp" line="320"/>
         <source>Vidéo enregistrée : %1</source>
         <translation>Video saved: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="348"/>
+        <location filename="../src/ui/MainWindow.cpp" line="352"/>
         <source>Exposition et balance des blancs réglées automatiquement</source>
         <translation>Exposure and white balance set automatically</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="383"/>
+        <location filename="../src/ui/MainWindow.cpp" line="387"/>
         <source>Se connecter</source>
         <translation>Log in</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="384"/>
+        <location filename="../src/ui/MainWindow.cpp" line="388"/>
         <source>Aucune classe n&apos;est configurée. Demande à ton enseignant d&apos;ouvrir le mode professeur et &quot;Gérer les classes et groupes...&quot;.</source>
         <translation>No class is configured. Ask your teacher to open teacher mode and “Manage classes and groups...”.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="448"/>
+        <location filename="../src/ui/MainWindow.cpp" line="452"/>
         <source>Résolution optimisée automatiquement : %1 x %2 (%3 ips)</source>
         <translation>Resolution automatically optimized: %1 x %2 (%3 fps)</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="490"/>
+        <location filename="../src/ui/MainWindow.cpp" line="494"/>
         <source>Code PIN professeur :</source>
         <translation>Teacher PIN code:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="496"/>
+        <location filename="../src/ui/MainWindow.cpp" line="500"/>
         <source>Code PIN incorrect.</source>
         <translation>Incorrect PIN code.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="591"/>
+        <location filename="../src/ui/MainWindow.cpp" line="584"/>
+        <source>Aucune caméra connectée.</source>
+        <translation>No camera connected.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="613"/>
         <source>Résolution : %1 x %2</source>
         <translation>Resolution: %1 x %2</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="625"/>
+        <location filename="../src/ui/MainWindow.cpp" line="619"/>
+        <source>La caméra n&apos;a pas accepté cette résolution (reste à %1 x %2).</source>
+        <translation>The camera did not accept this resolution (staying at %1 x %2).</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="659"/>
         <source>Caméra allumée</source>
         <translation>Camera on</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="625"/>
+        <location filename="../src/ui/MainWindow.cpp" line="659"/>
         <source>Caméra éteinte</source>
         <translation>Camera off</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="630"/>
+        <location filename="../src/ui/MainWindow.cpp" line="664"/>
         <source>Déconnecter la caméra</source>
         <translation>Disconnect the camera</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="633"/>
+        <location filename="../src/ui/MainWindow.cpp" line="667"/>
         <source>Caméra déconnectée.</source>
         <translation>Camera disconnected.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="639"/>
+        <location filename="../src/ui/MainWindow.cpp" line="673"/>
         <source>Aucune caméra détectée</source>
         <translation>No camera detected</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="651"/>
+        <location filename="../src/ui/MainWindow.cpp" line="685"/>
         <source>Impossible de se connecter à %1.</source>
         <translation>Could not connect to %1.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="682"/>
+        <location filename="../src/ui/MainWindow.cpp" line="716"/>
         <source>Renommer la photo</source>
         <translation>Rename photo</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="683"/>
+        <location filename="../src/ui/MainWindow.cpp" line="717"/>
         <source>Nom du fichier :</source>
         <translation>File name:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="693"/>
-        <location filename="../src/ui/MainWindow.cpp" line="700"/>
+        <location filename="../src/ui/MainWindow.cpp" line="727"/>
+        <location filename="../src/ui/MainWindow.cpp" line="734"/>
         <source>Renommer</source>
         <translation>Rename</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="693"/>
+        <location filename="../src/ui/MainWindow.cpp" line="727"/>
         <source>Un fichier porte déjà ce nom.</source>
         <translation>A file with this name already exists.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="700"/>
+        <location filename="../src/ui/MainWindow.cpp" line="734"/>
         <source>Impossible de renommer le fichier.</source>
         <translation>Could not rename the file.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="810"/>
+        <location filename="../src/ui/MainWindow.cpp" line="844"/>
         <source>E-Lab700_Sauvegarde_%1</source>
         <translation>E-Lab700_Backup_%1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="814"/>
+        <location filename="../src/ui/MainWindow.cpp" line="848"/>
         <source>Sauvegarde automatique effectuée.</source>
         <translation>Automatic backup completed.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="826"/>
+        <location filename="../src/ui/MainWindow.cpp" line="860"/>
         <source>Minuteur terminé !</source>
         <translation>Timer finished!</translation>
     </message>
@@ -1763,367 +1773,367 @@ Stop</translation>
         <translation>Gain</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="208"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="213"/>
         <source>Résolution</source>
         <translation>Resolution</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="212"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="217"/>
         <source>Affichage</source>
         <translation>Display</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="214"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="219"/>
         <source>Affichage noir et blanc</source>
         <translation>Black and white display</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="217"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="222"/>
         <source>Thème clair (au lieu de sombre)</source>
         <translation>Light theme (instead of dark)</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="220"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="225"/>
         <source>Grille de cadrage (règle des tiers)</source>
         <translation>Framing grid (rule of thirds)</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="223"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="228"/>
         <source>Indicateur de netteté</source>
         <translation>Sharpness indicator</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="228"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="233"/>
         <source>Bip sonore (fin d&apos;enregistrement, minuteur terminé)</source>
         <translation>Beep sound (recording finished, timer done)</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="235"/>
-        <location filename="../src/ui/TeacherPanel.cpp" line="630"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="240"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="635"/>
         <source>Langue de l&apos;interface</source>
         <translation>Interface language</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="249"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="254"/>
         <source>Limite de luminosité pour les élèves</source>
         <translation>Brightness limit for students</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="259"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="264"/>
         <source>Afficher une échelle de mesure</source>
         <translation>Show a scale bar</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="266"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="271"/>
         <source>Étalonnage : µm pour 100 px de l&apos;image</source>
         <translation>Calibration: µm per 100 px of the image</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="273"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="278"/>
         <source>Étalonner avec la caméra...</source>
         <translation>Calibrate with the camera...</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="287"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="292"/>
         <source>Accéléré (time-lapse)</source>
         <translation>Time-lapse</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="289"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="294"/>
         <source>Activer la capture accélérée</source>
         <translation>Enable time-lapse capture</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="296"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="301"/>
         <source>Intervalle</source>
         <translation>Interval</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="308"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="313"/>
         <source>Enregistrement</source>
         <translation>Recording</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="316"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="321"/>
         <source>Parcourir...</source>
         <translation>Browse...</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="319"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="324"/>
         <source>Dossier</source>
         <translation>Folder</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="325"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="330"/>
         <source>PNG (sans perte)</source>
         <translation>PNG (lossless)</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="326"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="331"/>
         <source>TIFF (archivage/analyse)</source>
         <translation>TIFF (archiving/analysis)</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="327"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="332"/>
         <source>JPG (léger)</source>
         <translation>JPG (small)</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="334"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="339"/>
         <source>Format photo</source>
         <translation>Photo format</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="337"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="342"/>
         <source>Enregistrer un fichier de métadonnées (.txt) avec chaque photo</source>
         <translation>Save a metadata file (.txt) with each photo</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="338"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="343"/>
         <source>Date, résolution, exposition, gain, étalonnage de l&apos;échelle, nom du microscope — à côté de chaque photo, pour la traçabilité des observations.</source>
         <translation>Date, resolution, exposure, gain, scale calibration, microscope name — next to each photo, for traceability of observations.</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="349"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="354"/>
         <source>ex : OMAX 83S, Bresser Erudit...</source>
         <translation>e.g. OMAX 83S, Bresser Erudit...</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="351"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="356"/>
         <source>Nom du microscope</source>
         <translation>Microscope name</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="356"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="361"/>
         <source>Classes et groupes</source>
         <translation>Classes and groups</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="358"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="363"/>
         <source>Gérer les classes et groupes...</source>
         <translation>Manage classes and groups...</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="359"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="364"/>
         <source>Vue d&apos;ensemble des groupes...</source>
         <translation>Groups overview...</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="368"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="373"/>
         <source>Minuteur d&apos;observation</source>
         <translation>Observation timer</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="370"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="375"/>
         <source>Durée</source>
         <translation>Duration</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="377"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="382"/>
         <source>Démarrer</source>
         <translation>Start</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="378"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="383"/>
         <source>Arrêter</source>
         <translation>Stop</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="391"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="396"/>
         <source>Sauvegarde automatique</source>
         <translation>Automatic backup</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="393"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="398"/>
         <source>Activer la sauvegarde automatique</source>
         <translation>Enable automatic backup</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="402"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="407"/>
         <source>Aucune destination choisie</source>
         <translation>No destination chosen</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="403"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="408"/>
         <source>Choisir...</source>
         <translation>Choose...</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="411"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="416"/>
         <source>Tous les</source>
         <translation>Every</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="418"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="423"/>
         <source>Sauvegarder maintenant</source>
         <translation>Back up now</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="432"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="437"/>
         <source>Verrouillage</source>
         <translation>Lock</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="435"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="440"/>
         <source>Verrouiller le mode élève (code PIN requis pour fermer l&apos;application)</source>
         <translation>Lock student mode (PIN code required to close the application)</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="442"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="447"/>
         <source>Sécurité et veille</source>
         <translation>Security and standby</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="451"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="456"/>
         <source>Nouveau PIN</source>
         <translation>New PIN</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="454"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="459"/>
         <source>Confirmer</source>
         <translation>Confirm</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="455"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="460"/>
         <source>Changer</source>
         <translation>Change</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="459"/>
-        <location filename="../src/ui/TeacherPanel.cpp" line="570"/>
-        <location filename="../src/ui/TeacherPanel.cpp" line="574"/>
-        <location filename="../src/ui/TeacherPanel.cpp" line="581"/>
-        <location filename="../src/ui/TeacherPanel.cpp" line="602"/>
-        <location filename="../src/ui/TeacherPanel.cpp" line="611"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="464"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="575"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="579"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="586"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="607"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="616"/>
         <source>Code PIN</source>
         <translation>PIN code</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="466"/>
-        <location filename="../src/ui/TeacherPanel.cpp" line="470"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="471"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="475"/>
         <source>Désactivée</source>
         <translation>Off</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="472"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="477"/>
         <source>Veille après</source>
         <translation>Standby after</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="477"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="482"/>
         <source>Fermer</source>
         <translation>Close</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="515"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="520"/>
         <source>Backend : %1 — connectée</source>
         <translation>Backend: %1 — connected</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="516"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="521"/>
         <source>Backend : %1 — aucune caméra détectée</source>
         <translation>Backend: %1 — no camera detected</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="551"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="556"/>
         <source>Dossier d&apos;enregistrement</source>
         <translation>Save folder</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="570"/>
-        <location filename="../src/ui/TeacherPanel.cpp" line="602"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="575"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="607"/>
         <source>Le code PIN doit contenir au moins 4 chiffres.</source>
         <translation>The PIN code must contain at least 4 digits.</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="574"/>
-        <location filename="../src/ui/TeacherPanel.cpp" line="611"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="579"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="616"/>
         <source>Les deux codes PIN ne correspondent pas.</source>
         <translation>The two PIN codes don&apos;t match.</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="581"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="586"/>
         <source>Code PIN mis à jour.</source>
         <translation>PIN code updated.</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="593"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="598"/>
         <source>Code PIN requis</source>
         <translation>PIN code required</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="594"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="599"/>
         <source>Verrouiller la fermeture exige un code PIN professeur.
 Choisissez un code PIN (4 chiffres minimum) :</source>
         <translation>Locking the app closed requires a teacher PIN code.
 Choose a PIN code (4 digits minimum):</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="607"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="612"/>
         <source>Confirmer le code PIN</source>
         <translation>Confirm PIN code</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="608"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="613"/>
         <source>Confirmez le code PIN :</source>
         <translation>Confirm the PIN code:</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="631"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="636"/>
         <source>Redémarrez E-Lab 700 pour appliquer le changement de langue.</source>
         <translation>Restart E-Lab 700 to apply the language change.</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="648"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="653"/>
         <source>Étalonnage</source>
         <translation>Calibration</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="649"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="654"/>
         <source>Aucune image de caméra disponible pour le moment.</source>
         <translation>No camera image available right now.</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="668"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="673"/>
         <source>Destination de la sauvegarde</source>
         <translation>Backup destination</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="681"/>
-        <location filename="../src/ui/TeacherPanel.cpp" line="690"/>
-        <location filename="../src/ui/TeacherPanel.cpp" line="697"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="686"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="695"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="702"/>
         <source>Sauvegarde</source>
         <translation>Backup</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="682"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="687"/>
         <source>Choisissez d&apos;abord une destination de sauvegarde.</source>
         <translation>Choose a backup destination first.</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="687"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="692"/>
         <source>E-Lab700_Sauvegarde_%1</source>
         <translation>E-Lab700_Backup_%1</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="691"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="696"/>
         <source>La sauvegarde a échoué ou est incomplète. Vérifiez l&apos;espace disponible.</source>
         <translation>The backup failed or is incomplete. Check available disk space.</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="698"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="703"/>
         <source>Sauvegarde effectuée :
 %1</source>
         <translation>Backup completed:
 %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="705"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="710"/>
         <source>Dernière sauvegarde : %1</source>
         <translation>Last backup: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/TeacherPanel.cpp" line="706"/>
+        <location filename="../src/ui/TeacherPanel.cpp" line="711"/>
         <source>Dernière sauvegarde : jamais</source>
         <translation>Last backup: never</translation>
     </message>
@@ -2132,7 +2142,7 @@ Choose a PIN code (4 digits minimum):</translation>
     <name>TopStatusBar</name>
     <message>
         <location filename="../src/ui/TopStatusBar.cpp" line="26"/>
-        <location filename="../src/ui/TopStatusBar.cpp" line="138"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="149"/>
         <source>● Caméra non connectée</source>
         <translation>● Camera not connected</translation>
     </message>
@@ -2143,13 +2153,13 @@ Choose a PIN code (4 digits minimum):</translation>
     </message>
     <message>
         <location filename="../src/ui/TopStatusBar.cpp" line="39"/>
-        <location filename="../src/ui/TopStatusBar.cpp" line="164"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="175"/>
         <source>Éteindre la caméra</source>
         <translation>Turn off the camera</translation>
     </message>
     <message>
         <location filename="../src/ui/TopStatusBar.cpp" line="42"/>
-        <location filename="../src/ui/TopStatusBar.cpp" line="140"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="151"/>
         <source>-- ips</source>
         <translation>-- fps</translation>
     </message>
@@ -2165,7 +2175,7 @@ Choose a PIN code (4 digits minimum):</translation>
     </message>
     <message>
         <location filename="../src/ui/TopStatusBar.cpp" line="65"/>
-        <location filename="../src/ui/TopStatusBar.cpp" line="212"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="223"/>
         <source>Se connecter</source>
         <translation>Log in</translation>
     </message>
@@ -2185,27 +2195,32 @@ Choose a PIN code (4 digits minimum):</translation>
         <translation>Help</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="134"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="91"/>
+        <source>Quitter</source>
+        <translation>Quit</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/TopStatusBar.cpp" line="145"/>
         <source>● Caméra connectée</source>
         <translation>● Camera connected</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="135"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="146"/>
         <source>● Caméra connectée (%1)</source>
         <translation>● Camera connected (%1)</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="149"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="160"/>
         <source>%1 ips</source>
         <translation>%1 fps</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="164"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="175"/>
         <source>Allumer la caméra</source>
         <translation>Turn on the camera</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="215"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="226"/>
         <source>%1 — %2</source>
         <translation>%1 — %2</translation>
     </message>

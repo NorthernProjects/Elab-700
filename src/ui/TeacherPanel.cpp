@@ -205,6 +205,11 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     const int currentIndex = m_resolutionCombo->findData(backend->currentResolution());
     if (currentIndex >= 0)
         m_resolutionCombo->setCurrentIndex(currentIndex);
+    // Same fixed-pixel-guess problem as the spin boxes below: a QComboBox's
+    // own sizeHint() doesn't always leave room for the dropdown arrow at
+    // every DPI/font, so the widest resolution string ("2592 x 1944") was
+    // getting clipped on some displays.
+    m_resolutionCombo->setMinimumWidth(widthForWidestText(m_resolutionCombo, QStringLiteral("2592 x 1944"), 40));
     cameraForm->addRow(tr("Résolution"), m_resolutionCombo);
 
     leftColumn->addWidget(cameraGroup);
