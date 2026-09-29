@@ -21,6 +21,12 @@ public:
 public slots:
     void setFrame(const QImage &image);
     void setCameraConnected(bool connected);
+
+    // Distinguishes "deliberately turned off" (see TopStatusBar's power
+    // button) from "not connected" — same empty video area either way, but
+    // a different message so it reads as a real mode, not the same generic
+    // "nothing detected" state a genuinely unplugged/missing camera shows.
+    void setCameraPoweredOff(bool off);
     void setLightTheme(bool light);
     void setImmersive(bool immersive);
     void setShowGrid(bool show);
@@ -48,6 +54,7 @@ private:
 
     QImage m_currentFrame;
     bool m_cameraConnected = false;
+    bool m_poweredOff = false;
     bool m_lightTheme = false;
     bool m_immersive = false;
     bool m_showGrid = false;

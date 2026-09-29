@@ -222,7 +222,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_cameraManager, &CameraManager::connected, this, &MainWindow::onCameraConnected);
     connect(&m_cameraManager, &CameraManager::disconnected, this, &MainWindow::onCameraDisconnected);
     connect(&m_cameraManager, &CameraManager::poweredOnChanged, m_topBar, &TopStatusBar::setCameraPoweredIndicator);
+    connect(&m_cameraManager, &CameraManager::poweredOnChanged, this, [this](bool on) {
+        m_videoView->setCameraPoweredOff(!on);
+    });
     m_topBar->setCameraPoweredIndicator(m_cameraManager.isPoweredOn());
+    m_videoView->setCameraPoweredOff(!m_cameraManager.isPoweredOn());
 
     CameraBackend *backend = m_cameraManager.backend();
     connect(backend, &CameraBackend::frameReady, this, [this](const CameraFrame &frame) {
@@ -525,9 +529,12 @@ void MainWindow::onCameraConnected(const CameraDeviceInfo &info)
     m_microscopeInfoPanel->setResolution(backend->currentResolution());
     // Reflect whatever brightness the backend actually opened with (clamped
     // to the teacher's ceiling) rather than leaving the slider at its
-    // construction-time default of 50%.
+    // construction-time default of 50% — read-only: writing this same value
+    // straight back to the driver right after open() caused some UVC
+    // cameras (including the microscope's) to drop or corrupt the stream,
+    // since CAP_PROP_BRIGHTNESS support/range is unreliable across drivers.
+    // Only the user dragging the slider should ever call setBrightness().
     const int initialBrightness = qMin(backend->brightness(), m_settings.maxBrightnessPercent());
-    backend->setBrightness(initialBrightness);
     m_bottomBar->setBrightnessPercent(initialBrightness);
     // Sharp in the eyepieces but soft on screen usually means the captured
     // resolution is lower than what's needed to fill the display without

@@ -93,6 +93,14 @@ void VideoView::setCameraConnected(bool connected)
     update();
 }
 
+void VideoView::setCameraPoweredOff(bool off)
+{
+    if (m_poweredOff == off)
+        return;
+    m_poweredOff = off;
+    update();
+}
+
 void VideoView::paintEvent(QPaintEvent * /*event*/)
 {
     QPainter painter(this);
@@ -109,8 +117,9 @@ void VideoView::paintEvent(QPaintEvent * /*event*/)
         font.setPointSize(20);
         font.setBold(true);
         painter.setFont(font);
-        painter.drawText(rect(), Qt::AlignCenter,
-                          tr("📷  Aucune caméra détectée\nBranchez la caméra du microscope"));
+        painter.drawText(rect(), Qt::AlignCenter, m_poweredOff
+            ? tr("⏻  Caméra éteinte\nRallumez-la avec le bouton d'alimentation")
+            : tr("📷  Aucune caméra détectée\nBranchez la caméra du microscope"));
         return;
     }
 
