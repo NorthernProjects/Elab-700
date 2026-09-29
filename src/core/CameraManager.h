@@ -20,6 +20,11 @@ public:
 
     CameraBackend *backend() const { return m_backend.data(); }
     bool isConnected() const;
+
+    // "Powered on" = allowed to be connected/auto-reconnecting; distinct from
+    // isConnected() (a powered-on camera can briefly show no device while
+    // scanning). Mirrors m_manuallyDisconnected — see setPoweredOn().
+    bool isPoweredOn() const { return !m_manuallyDisconnected; }
     QVector<CameraDeviceInfo> lastKnownDevices() const { return m_devices; }
     QString currentDeviceId() const { return m_currentDeviceId; }
 
@@ -39,9 +44,16 @@ public slots:
     // telling the driver to stop.
     void disconnectCamera();
 
+    // The easy on/off switch next to the connection indicator (see
+    // TopStatusBar): off is the same as disconnectCamera() (closes, stops
+    // auto-reconnect); on clears that and immediately retries. Simpler than
+    // the per-device picker menu for "just don't leave it powered/idle".
+    void setPoweredOn(bool on);
+
 signals:
     void connected(const CameraDeviceInfo &info);
     void disconnected();
+    void poweredOnChanged(bool on);
 
 private slots:
     void onProbeFinished();

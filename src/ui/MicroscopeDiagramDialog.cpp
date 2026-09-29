@@ -157,43 +157,43 @@ void MicroscopeDiagramWidget::paintEvent(QPaintEvent * /*event*/)
     // Labels with leader lines — grouped left / right / top so text never
     // overlaps the drawing itself.
     drawLeaderLabel(painter, QPointF(196, 132), QPointF(40, 60),
-                    QStringLiteral("Oculaires"), accent);
+                    tr("Oculaires"), accent);
     drawLeaderLabel(painter, QPointF(328, 77), QPointF(360, 40),
-                    QStringLiteral("Caméra (port trinoculaire)"), accent);
+                    tr("Caméra (port trinoculaire)"), accent);
     drawLeaderLabel(painter, QPointF(271, 150), QPointF(40, 130),
-                    QStringLiteral("Tête trinoculaire"), accent);
+                    tr("Tête trinoculaire"), accent);
     drawLeaderLabel(painter, QPointF(260, 292), QPointF(360, 260),
-                    QStringLiteral("Tube optique"), accent);
+                    tr("Tube optique"), accent);
     drawLeaderLabel(painter, QPointF(260, 358), QPointF(40, 340),
-                    QStringLiteral("Tourelle porte-objectifs"), accent);
+                    tr("Tourelle porte-objectifs"), accent);
     drawLeaderLabel(painter, QPointF(250, 380), QPointF(40, 400),
-                    QStringLiteral("Objectifs"), accent);
+                    tr("Objectifs"), accent);
     drawLeaderLabel(painter, QPointF(150, 413), QPointF(40, 470),
-                    QStringLiteral("Platine (porte-lame)"), accent);
+                    tr("Platine (porte-lame)"), accent);
     drawLeaderLabel(painter, QPointF(260, 440), QPointF(360, 500),
-                    QStringLiteral("Condenseur"), accent);
+                    tr("Condenseur"), accent);
     drawLeaderLabel(painter, QPointF(260, 568), QPointF(40, 560),
-                    QStringLiteral("Source lumineuse"), accent);
+                    tr("Source lumineuse"), accent);
     drawLeaderLabel(painter, QPointF(319, 220), QPointF(360, 200),
-                    QStringLiteral("Bras"), accent);
+                    tr("Bras"), accent);
     drawLeaderLabel(painter, QPointF(295, 470), QPointF(360, 470),
-                    QStringLiteral("Vis macrométrique"), accent);
+                    tr("Vis macrométrique"), accent);
     drawLeaderLabel(painter, QPointF(295, 520), QPointF(360, 530),
-                    QStringLiteral("Vis micrométrique"), accent);
+                    tr("Vis micrométrique"), accent);
     drawLeaderLabel(painter, QPointF(240, 599), QPointF(40, 600),
-                    QStringLiteral("Socle (base)"), accent);
+                    tr("Socle (base)"), accent);
 }
 
 MicroscopeDiagramDialog::MicroscopeDiagramDialog(QWidget *parent) : QDialog(parent)
 {
-    setWindowTitle(QStringLiteral("Schéma du microscope"));
+    setWindowTitle(tr("Schéma du microscope"));
     resize(760, 720);
 
     auto *root = new QVBoxLayout(this);
 
     auto *introLabel = new QLabel(
-        QStringLiteral("Schéma simplifié d'un microscope trinoculaire — les noms des différentes parties, "
-                        "pour apprendre à s'en servir."),
+        tr("Schéma simplifié d'un microscope trinoculaire — les noms des différentes parties, "
+           "pour apprendre à s'en servir."),
         this);
     introLabel->setWordWrap(true);
     root->addWidget(introLabel);
@@ -201,7 +201,7 @@ MicroscopeDiagramDialog::MicroscopeDiagramDialog(QWidget *parent) : QDialog(pare
     auto *diagram = new MicroscopeDiagramWidget(this);
     root->addWidget(diagram, 1);
 
-    auto *closeButton = new QPushButton(QStringLiteral("Fermer"), this);
+    auto *closeButton = new QPushButton(tr("Fermer"), this);
     connect(closeButton, &QPushButton::clicked, this, &QDialog::accept);
     root->addWidget(closeButton);
 }

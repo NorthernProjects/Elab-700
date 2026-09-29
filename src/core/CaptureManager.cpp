@@ -111,19 +111,19 @@ QString CaptureManager::nextFilePath(const QString &prefix, const QString &exten
 void CaptureManager::takePhoto()
 {
     if (m_lastFrame.image.isNull()) {
-        emit captureError(QStringLiteral("Aucune image disponible : caméra non connectée."));
+        emit captureError(tr("Aucune image disponible : caméra non connectée."));
         return;
     }
 
     cv::Mat mat;
     if (!imageToBgrMat(m_lastFrame.image, mat)) {
-        emit captureError(QStringLiteral("Impossible de convertir l'image pour l'enregistrement."));
+        emit captureError(tr("Impossible de convertir l'image pour l'enregistrement."));
         return;
     }
 
     const QString path = nextFilePath(QStringLiteral("photo"), m_settings->photoFormat());
     if (!cv::imwrite(path.toStdString(), mat)) {
-        emit captureError(QStringLiteral("Échec de l'enregistrement de la photo : %1").arg(path));
+        emit captureError(tr("Échec de l'enregistrement de la photo : %1").arg(path));
         return;
     }
 
@@ -138,10 +138,10 @@ void CaptureManager::takePhoto()
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             out.setCodec("UTF-8"); // Qt 6 already defaults to UTF-8
 #endif
-            out << QStringLiteral("Fichier : %1\n").arg(QFileInfo(path).fileName());
-            out << QStringLiteral("Date : %1\n")
+            out << tr("Fichier : %1\n").arg(QFileInfo(path).fileName());
+            out << tr("Date : %1\n")
                        .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss")));
-            out << QStringLiteral("Dimensions : %1 x %2 px\n")
+            out << tr("Dimensions : %1 x %2 px\n")
                        .arg(m_lastFrame.image.width()).arg(m_lastFrame.image.height());
             if (m_metadataProvider)
                 out << m_metadataProvider();
@@ -157,7 +157,7 @@ bool CaptureManager::startRecording()
         return true;
 
     if (m_lastFrame.image.isNull()) {
-        emit captureError(QStringLiteral("Aucune image disponible : caméra non connectée."));
+        emit captureError(tr("Aucune image disponible : caméra non connectée."));
         return false;
     }
 
@@ -169,7 +169,7 @@ bool CaptureManager::startRecording()
                                Q_ARG(double, 25.0), Q_ARG(int, m_lastFrame.image.width()),
                                Q_ARG(int, m_lastFrame.image.height()));
     if (!opened) {
-        emit captureError(QStringLiteral("Impossible de démarrer l'enregistrement vidéo."));
+        emit captureError(tr("Impossible de démarrer l'enregistrement vidéo."));
         return false;
     }
 

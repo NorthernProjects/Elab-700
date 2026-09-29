@@ -20,7 +20,7 @@ const QStringList kVideoFilters = {"*.mp4", "*.avi"};
 TrashDialog::TrashDialog(const QString &captureFolder, QWidget *parent)
     : QDialog(parent), m_captureFolder(captureFolder)
 {
-    setWindowTitle(QStringLiteral("Corbeille"));
+    setWindowTitle(tr("Corbeille"));
     resize(640, 440);
 
     m_listWidget = new QListWidget(this);
@@ -31,13 +31,13 @@ TrashDialog::TrashDialog(const QString &captureFolder, QWidget *parent)
     m_listWidget->setMovement(QListView::Static);
 
     auto *infoLabel = new QLabel(
-        QStringLiteral("Les photos et vidéos supprimées restent ici 7 jours avant d'être effacées pour de bon."),
+        tr("Les photos et vidéos supprimées restent ici 7 jours avant d'être effacées pour de bon."),
         this);
     infoLabel->setWordWrap(true);
 
-    m_restoreButton = new QPushButton(QStringLiteral("Restaurer"), this);
-    m_deleteButton = new QPushButton(QStringLiteral("Supprimer définitivement"), this);
-    auto *closeButton = new QPushButton(QStringLiteral("Fermer"), this);
+    m_restoreButton = new QPushButton(tr("Restaurer"), this);
+    m_deleteButton = new QPushButton(tr("Supprimer définitivement"), this);
+    auto *closeButton = new QPushButton(tr("Fermer"), this);
     m_restoreButton->setEnabled(false);
     m_deleteButton->setEnabled(false);
 
@@ -104,7 +104,7 @@ void TrashDialog::onRestoreSelected()
         destPath = destDir.filePath(QStringLiteral("%1_%2.%3").arg(fi.completeBaseName()).arg(counter++).arg(fi.suffix()));
 
     if (!QFile::rename(path, destPath)) {
-        QMessageBox::warning(this, QStringLiteral("Restaurer"), QStringLiteral("Impossible de restaurer ce fichier."));
+        QMessageBox::warning(this, tr("Restaurer"), tr("Impossible de restaurer ce fichier."));
         return;
     }
     reloadItems();
@@ -117,14 +117,14 @@ void TrashDialog::onDeleteForeverSelected()
         return;
 
     const QString path = item->data(Qt::UserRole).toString();
-    const auto answer = QMessageBox::question(this, QStringLiteral("Supprimer définitivement"),
-                                               QStringLiteral("Supprimer définitivement %1 ? Cette action est irréversible.")
+    const auto answer = QMessageBox::question(this, tr("Supprimer définitivement"),
+                                               tr("Supprimer définitivement %1 ? Cette action est irréversible.")
                                                    .arg(QFileInfo(path).fileName()));
     if (answer != QMessageBox::Yes)
         return;
 
     if (!QFile::remove(path)) {
-        QMessageBox::warning(this, QStringLiteral("Supprimer"), QStringLiteral("Échec de la suppression du fichier."));
+        QMessageBox::warning(this, tr("Supprimer"), tr("Échec de la suppression du fichier."));
         return;
     }
     reloadItems();

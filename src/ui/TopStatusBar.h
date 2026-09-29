@@ -36,6 +36,11 @@ public slots:
     void setGroupButtonVisible(bool visible);
     void setTeacherButtonToolTip(const QString &tip);
 
+    // Updates the power button's icon/color/tooltip. Driven by
+    // CameraManager::poweredOnChanged (via MainWindow), not by the button's
+    // own click — the actual on/off state lives in CameraManager.
+    void setCameraPoweredIndicator(bool on);
+
     // Extra left margin, in pixels, added on top of the normal content
     // margin — used on macOS to keep the logo/connection indicator clear of
     // the traffic-light buttons when the native titlebar is hidden (see
@@ -60,10 +65,12 @@ signals:
     void resolutionClicked();
     void connectionClicked();
     void helpRequested();
+    void powerToggleRequested();
 
 private:
     QLabel *m_logoLabel;
     QPushButton *m_connectionButton;
+    QPushButton *m_powerButton;
     QPushButton *m_microscopeLabel;
     QPushButton *m_groupButton;
     QLabel *m_fpsLabel;

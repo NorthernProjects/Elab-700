@@ -45,6 +45,7 @@ private slots:
     void onZoomInRequested();
     void onZoomOutRequested();
     void onZoomResetRequested();
+    void onBrightnessChanged(int percent);
     void onGroupSelectionRequested();
     void onMicroscopeInfoRequested();
     void onResolutionClicked();

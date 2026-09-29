@@ -94,7 +94,10 @@ void CameraManager::connectToBestCandidate()
 
 bool CameraManager::forceConnect(const QString &deviceId)
 {
-    m_manuallyDisconnected = false;
+    if (m_manuallyDisconnected) {
+        m_manuallyDisconnected = false;
+        emit poweredOnChanged(true);
+    }
 
     if (m_backend->isOpen()) {
         if (m_currentDeviceId == deviceId)
@@ -115,4 +118,28 @@ void CameraManager::disconnectCamera()
         return;
     m_manuallyDisconnected = true;
     m_backend->close();
+    emit poweredOnChanged(false);
+}
+
+void CameraManager::setPoweredOn(bool on)
+{
+    if (on == isPoweredOn())
+        return;
+
+    if (!on) {
+        // Not just disconnectCamera(): that function no-ops when nothing is
+        // currently open (e.g. "Aucune caméra détectée"), which would leave
+        // the power button stuck showing "on" with nothing to actually turn
+        // off. Set the flag and emit unconditionally; only close the backend
+        // if there's actually something open to close.
+        m_manuallyDisconnected = true;
+        if (m_backend->isOpen())
+            m_backend->close();
+        emit poweredOnChanged(false);
+        return;
+    }
+
+    m_manuallyDisconnected = false;
+    emit poweredOnChanged(true);
+    rescan(); // no-op if already open/probing; otherwise retries right away
 }

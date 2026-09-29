@@ -12,7 +12,7 @@
 StartupSelectionDialog::StartupSelectionDialog(const QVector<SchoolClass> &classes, QWidget *parent)
     : QDialog(parent), m_classes(classes)
 {
-    setWindowTitle(QStringLiteral("Se connecter"));
+    setWindowTitle(tr("Se connecter"));
     setModal(true);
     resize(420, 300);
 
@@ -25,7 +25,7 @@ StartupSelectionDialog::StartupSelectionDialog(const QVector<SchoolClass> &class
         logoLabel->setPixmap(logo.scaledToWidth(200, Qt::SmoothTransformation));
     root->addWidget(logoLabel);
 
-    auto *introLabel = new QLabel(QStringLiteral("Choisis ta classe et ton groupe, puis entre le mot de passe de ta classe."), this);
+    auto *introLabel = new QLabel(tr("Choisis ta classe et ton groupe, puis entre le mot de passe de ta classe."), this);
     introLabel->setAlignment(Qt::AlignCenter);
     introLabel->setWordWrap(true);
     root->addWidget(introLabel);
@@ -37,9 +37,9 @@ StartupSelectionDialog::StartupSelectionDialog(const QVector<SchoolClass> &class
     m_passwordEdit->setEchoMode(QLineEdit::Password);
     for (const SchoolClass &schoolClass : m_classes)
         m_classCombo->addItem(schoolClass.name);
-    form->addRow(QStringLiteral("Classe"), m_classCombo);
-    form->addRow(QStringLiteral("Groupe"), m_groupCombo);
-    form->addRow(QStringLiteral("Mot de passe"), m_passwordEdit);
+    form->addRow(tr("Classe"), m_classCombo);
+    form->addRow(tr("Groupe"), m_groupCombo);
+    form->addRow(tr("Mot de passe"), m_passwordEdit);
     root->addLayout(form);
 
     m_errorLabel = new QLabel(this);
@@ -49,7 +49,7 @@ StartupSelectionDialog::StartupSelectionDialog(const QVector<SchoolClass> &class
     root->addWidget(m_errorLabel);
 
     auto *buttons = new QDialogButtonBox(this);
-    auto *startButton = buttons->addButton(QStringLiteral("Se connecter"), QDialogButtonBox::AcceptRole);
+    auto *startButton = buttons->addButton(tr("Se connecter"), QDialogButtonBox::AcceptRole);
     root->addWidget(buttons);
 
     connect(m_classCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -76,7 +76,7 @@ void StartupSelectionDialog::onConnectClicked()
 
     const SchoolClass &schoolClass = m_classes.at(index);
     if (!schoolClass.password.isEmpty() && m_passwordEdit->text() != schoolClass.password) {
-        m_errorLabel->setText(QStringLiteral("Mot de passe incorrect."));
+        m_errorLabel->setText(tr("Mot de passe incorrect."));
         m_errorLabel->show();
         return;
     }

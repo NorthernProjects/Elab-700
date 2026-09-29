@@ -1,5 +1,7 @@
 #include "PhotoEditorDialog.h"
 
+#include <cmath>
+
 #include <QButtonGroup>
 #include <QColorDialog>
 #include <QHBoxLayout>
@@ -14,6 +16,38 @@
 
 namespace {
 constexpr int kMaxUndoDepth = 20;
+
+// Shared by the live preview (widget space) and the final bake (image
+// space) so the two never drift apart.
+void drawArrow(QPainter &painter, const QPoint &from, const QPoint &to, const QColor &color, int penWidth)
+{
+    QPen pen(color);
+    pen.setWidth(penWidth);
+    pen.setCapStyle(Qt::RoundCap);
+    painter.setPen(pen);
+    painter.setBrush(color);
+    painter.drawLine(from, to);
+
+    const QLineF line(from, to);
+    if (line.length() < 1.0)
+        return;
+    const double angle = std::atan2(line.dy(), line.dx());
+    constexpr double kHeadLength = 18.0;
+    constexpr double kHeadAngle = 0.5; // radians, ~29°
+    const QPointF p1 = to - QPointF(std::cos(angle - kHeadAngle), std::sin(angle - kHeadAngle)) * kHeadLength;
+    const QPointF p2 = to - QPointF(std::cos(angle + kHeadAngle), std::sin(angle + kHeadAngle)) * kHeadLength;
+    const QPolygonF head({to, p1, p2});
+    painter.drawPolygon(head);
+}
+
+void drawCircle(QPainter &painter, const QRect &boundingRect, const QColor &color, int penWidth)
+{
+    QPen pen(color);
+    pen.setWidth(penWidth);
+    painter.setPen(pen);
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(boundingRect);
+}
 }
 
 PhotoCanvas::PhotoCanvas(QWidget *parent) : QWidget(parent)
@@ -38,6 +72,7 @@ void PhotoCanvas::setTool(Tool tool)
 {
     m_tool = tool;
     m_cropRect = QRect();
+    m_shapeDragging = false;
     update();
 }
 
@@ -123,6 +158,16 @@ QPoint PhotoCanvas::widgetToImage(const QPoint &widgetPoint) const
     return QPoint(x, y);
 }
 
+QPoint PhotoCanvas::imageToWidget(const QPoint &imagePoint) const
+{
+    const QRect r = imageDisplayRect();
+    if (m_image.isNull() || m_image.width() <= 0 || m_image.height() <= 0)
+        return imagePoint;
+    const double sx = static_cast<double>(r.width()) / m_image.width();
+    const double sy = static_cast<double>(r.height()) / m_image.height();
+    return QPoint(r.left() + static_cast<int>(imagePoint.x() * sx), r.top() + static_cast<int>(imagePoint.y() * sy));
+}
+
 void PhotoCanvas::paintEvent(QPaintEvent * /*event*/)
 {
     QPainter painter(this);
@@ -133,6 +178,16 @@ void PhotoCanvas::paintEvent(QPaintEvent * /*event*/)
 
     const QRect displayRect = imageDisplayRect();
     painter.drawImage(displayRect, m_image);
+
+    if (m_shapeDragging && (m_tool == Tool::Arrow || m_tool == Tool::Circle)) {
+        painter.setRenderHint(QPainter::Antialiasing);
+        const QPoint from = imageToWidget(m_shapeStartImagePoint);
+        const QPoint to = imageToWidget(m_shapeCurrentImagePoint);
+        if (m_tool == Tool::Arrow)
+            drawArrow(painter, from, to, m_penColor, 3);
+        else
+            drawCircle(painter, QRect(from, to).normalized(), m_penColor, 3);
+    }
 
     if (m_tool == Tool::Crop && m_cropRect.isValid()) {
         const double sx = static_cast<double>(displayRect.width()) / m_image.width();
@@ -177,8 +232,8 @@ void PhotoCanvas::mousePressEvent(QMouseEvent *event)
         break;
     case Tool::Text: {
         bool ok = false;
-        const QString text = QInputDialog::getText(this, QStringLiteral("Ajouter un texte"),
-                                                     QStringLiteral("Texte :"), QLineEdit::Normal, QString(), &ok);
+        const QString text = QInputDialog::getText(this, tr("Ajouter un texte"),
+                                                     tr("Texte :"), QLineEdit::Normal, QString(), &ok);
         if (ok && !text.trimmed().isEmpty()) {
             pushUndoSnapshot();
             QPainter painter(&m_image);
@@ -194,6 +249,12 @@ void PhotoCanvas::mousePressEvent(QMouseEvent *event)
         }
         break;
     }
+    case Tool::Arrow:
+    case Tool::Circle:
+        m_shapeDragging = true;
+        m_shapeStartImagePoint = imagePoint;
+        m_shapeCurrentImagePoint = imagePoint;
+        break;
     case Tool::Crop:
         m_cropDragging = true;
         m_cropStartImagePoint = imagePoint;
@@ -221,6 +282,9 @@ void PhotoCanvas::mouseMoveEvent(QMouseEvent *event)
         painter.drawLine(m_lastImagePoint, imagePoint);
         m_lastImagePoint = imagePoint;
         update();
+    } else if ((m_tool == Tool::Arrow || m_tool == Tool::Circle) && m_shapeDragging) {
+        m_shapeCurrentImagePoint = imagePoint;
+        update();
     } else if (m_tool == Tool::Crop && m_cropDragging) {
         m_cropRect = QRect(m_cropStartImagePoint, imagePoint).normalized();
         update();
@@ -234,13 +298,29 @@ void PhotoCanvas::mouseReleaseEvent(QMouseEvent *event)
         m_stroking = false;
         emit imageChanged();
     }
+    if ((m_tool == Tool::Arrow || m_tool == Tool::Circle) && m_shapeDragging) {
+        m_shapeDragging = false;
+        // A tap with no real drag draws nothing worth keeping — skip the
+        // undo snapshot and bake entirely rather than leaving a stray dot.
+        if (m_shapeStartImagePoint != m_shapeCurrentImagePoint) {
+            pushUndoSnapshot();
+            QPainter painter(&m_image);
+            painter.setRenderHint(QPainter::Antialiasing);
+            if (m_tool == Tool::Arrow)
+                drawArrow(painter, m_shapeStartImagePoint, m_shapeCurrentImagePoint, m_penColor, 4);
+            else
+                drawCircle(painter, QRect(m_shapeStartImagePoint, m_shapeCurrentImagePoint).normalized(), m_penColor, 4);
+            emit imageChanged();
+        }
+        update();
+    }
     m_cropDragging = false;
 }
 
 PhotoEditorDialog::PhotoEditorDialog(const QString &imagePath, QWidget *parent)
     : QDialog(parent), m_imagePath(imagePath)
 {
-    setWindowTitle(QStringLiteral("Modifier la photo"));
+    setWindowTitle(tr("Modifier la photo"));
     resize(820, 640);
 
     auto *root = new QVBoxLayout(this);
@@ -250,28 +330,36 @@ PhotoEditorDialog::PhotoEditorDialog(const QString &imagePath, QWidget *parent)
     root->addWidget(m_canvas, 1);
 
     auto *toolRow = new QHBoxLayout();
-    auto *penButton = new QPushButton(QStringLiteral("✏ Dessiner"), this);
-    auto *textButton = new QPushButton(QStringLiteral("🔤 Texte"), this);
-    auto *cropButton = new QPushButton(QStringLiteral("⬛ Rogner"), this);
+    auto *penButton = new QPushButton(tr("✏ Dessiner"), this);
+    auto *textButton = new QPushButton(tr("🔤 Texte"), this);
+    auto *arrowButton = new QPushButton(tr("➜ Flèche"), this);
+    auto *circleButton = new QPushButton(tr("◯ Cercle"), this);
+    auto *cropButton = new QPushButton(tr("⬛ Rogner"), this);
     penButton->setCheckable(true);
     textButton->setCheckable(true);
+    arrowButton->setCheckable(true);
+    circleButton->setCheckable(true);
     cropButton->setCheckable(true);
     penButton->setChecked(true);
 
     auto *toolGroup = new QButtonGroup(this);
     toolGroup->addButton(penButton);
     toolGroup->addButton(textButton);
+    toolGroup->addButton(arrowButton);
+    toolGroup->addButton(circleButton);
     toolGroup->addButton(cropButton);
     toolGroup->setExclusive(true);
 
-    auto *colorButton = new QPushButton(QStringLiteral("Couleur"), this);
+    auto *colorButton = new QPushButton(tr("Couleur"), this);
     auto *rotateLeftButton = new QPushButton(QStringLiteral("↺"), this);
     auto *rotateRightButton = new QPushButton(QStringLiteral("↻"), this);
-    auto *applyCropButton = new QPushButton(QStringLiteral("Appliquer le rognage"), this);
-    auto *undoButton = new QPushButton(QStringLiteral("Annuler"), this);
+    auto *applyCropButton = new QPushButton(tr("Appliquer le rognage"), this);
+    auto *undoButton = new QPushButton(tr("Annuler"), this);
 
     toolRow->addWidget(penButton);
     toolRow->addWidget(textButton);
+    toolRow->addWidget(arrowButton);
+    toolRow->addWidget(circleButton);
     toolRow->addWidget(colorButton);
     toolRow->addWidget(cropButton);
     toolRow->addWidget(applyCropButton);
@@ -282,8 +370,8 @@ PhotoEditorDialog::PhotoEditorDialog(const QString &imagePath, QWidget *parent)
     root->addLayout(toolRow);
 
     auto *bottomRow = new QHBoxLayout();
-    auto *saveButton = new QPushButton(QStringLiteral("Enregistrer"), this);
-    auto *closeButton = new QPushButton(QStringLiteral("Fermer"), this);
+    auto *saveButton = new QPushButton(tr("Enregistrer"), this);
+    auto *closeButton = new QPushButton(tr("Fermer"), this);
     bottomRow->addStretch();
     bottomRow->addWidget(saveButton);
     bottomRow->addWidget(closeButton);
@@ -291,6 +379,8 @@ PhotoEditorDialog::PhotoEditorDialog(const QString &imagePath, QWidget *parent)
 
     connect(penButton, &QPushButton::clicked, this, [this] { m_canvas->setTool(PhotoCanvas::Tool::Pen); });
     connect(textButton, &QPushButton::clicked, this, [this] { m_canvas->setTool(PhotoCanvas::Tool::Text); });
+    connect(arrowButton, &QPushButton::clicked, this, [this] { m_canvas->setTool(PhotoCanvas::Tool::Arrow); });
+    connect(circleButton, &QPushButton::clicked, this, [this] { m_canvas->setTool(PhotoCanvas::Tool::Circle); });
     connect(cropButton, &QPushButton::clicked, this, [this] { m_canvas->setTool(PhotoCanvas::Tool::Crop); });
     connect(colorButton, &QPushButton::clicked, this, &PhotoEditorDialog::onPickColor);
     connect(rotateLeftButton, &QPushButton::clicked, m_canvas, &PhotoCanvas::rotateLeft);
@@ -303,7 +393,7 @@ PhotoEditorDialog::PhotoEditorDialog(const QString &imagePath, QWidget *parent)
 
 void PhotoEditorDialog::onPickColor()
 {
-    const QColor color = QColorDialog::getColor(Qt::red, this, QStringLiteral("Couleur d'annotation"));
+    const QColor color = QColorDialog::getColor(Qt::red, this, tr("Couleur d'annotation"));
     if (color.isValid())
         m_canvas->setPenColor(color);
 }
@@ -311,8 +401,8 @@ void PhotoEditorDialog::onPickColor()
 void PhotoEditorDialog::onSave()
 {
     if (!m_canvas->image().save(m_imagePath)) {
-        QMessageBox::warning(this, QStringLiteral("Enregistrer"), QStringLiteral("Impossible d'enregistrer la photo."));
+        QMessageBox::warning(this, tr("Enregistrer"), tr("Impossible d'enregistrer la photo."));
         return;
     }
-    QMessageBox::information(this, QStringLiteral("Enregistrer"), QStringLiteral("Photo enregistrée."));
+    QMessageBox::information(this, tr("Enregistrer"), tr("Photo enregistrée."));
 }

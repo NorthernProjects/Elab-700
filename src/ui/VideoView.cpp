@@ -110,7 +110,7 @@ void VideoView::paintEvent(QPaintEvent * /*event*/)
         font.setBold(true);
         painter.setFont(font);
         painter.drawText(rect(), Qt::AlignCenter,
-                          QStringLiteral("📷  Aucune caméra détectée\nBranchez la caméra du microscope"));
+                          tr("📷  Aucune caméra détectée\nBranchez la caméra du microscope"));
         return;
     }
 
@@ -191,7 +191,7 @@ void VideoView::drawFocusIndicator(QPainter &painter) const
     font.setBold(true);
     painter.setFont(font);
     painter.drawText(badgeRect.adjusted(0, 0, -8, 0), Qt::AlignRight | Qt::AlignVCenter,
-                      QStringLiteral("Netteté"));
+                      tr("Netteté"));
 }
 
 void VideoView::drawGridBadge(QPainter &painter)
@@ -213,7 +213,7 @@ void VideoView::drawGridBadge(QPainter &painter)
     font.setPointSize(9);
     font.setBold(true);
     painter.setFont(font);
-    painter.drawText(badgeRect, Qt::AlignCenter, QStringLiteral("● Grille"));
+    painter.drawText(badgeRect, Qt::AlignCenter, tr("● Grille"));
 
     m_gridBadgeRect = badgeRect;
 }
@@ -269,8 +269,8 @@ void VideoView::drawScaleBar(QPainter &painter, const QRect &imageRect) const
         return;
 
     const QString label = chosenMicrons >= 1000.0
-        ? QStringLiteral("%1 mm").arg(chosenMicrons / 1000.0, 0, 'g', 3)
-        : QStringLiteral("%1 µm").arg(chosenMicrons, 0, 'g', 3);
+        ? tr("%1 mm").arg(chosenMicrons / 1000.0, 0, 'g', 3)
+        : tr("%1 µm").arg(chosenMicrons, 0, 'g', 3);
 
     const int barBottom = imageRect.bottom() - 20;
     const int barLeft = imageRect.left() + 20;

@@ -11,6 +11,7 @@
 #include <QGroupBox>
 #include <QGuiApplication>
 #include <QHBoxLayout>
+#include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
@@ -45,7 +46,7 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     : QDialog(parent), m_settings(settings), m_backend(backend), m_frameProvider(std::move(frameProvider))
 {
     setWindowTitle(m_settings->appMode() == QLatin1String("school")
-        ? QStringLiteral("Mode professeur") : QStringLiteral("Réglages avancés"));
+        ? tr("Mode professeur") : tr("Réglages avancés"));
 
     // Take up most of the screen instead of a small fixed size: with two
     // columns of settings groups below, this puts nearly everything on
@@ -85,38 +86,38 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     content->addLayout(columns);
 
     // ---- Édition du logiciel (un seul exe, trois profils gratuits) ----
-    auto *editionGroup = new QGroupBox(QStringLiteral("Édition du logiciel"), scrollContent);
+    auto *editionGroup = new QGroupBox(tr("Édition du logiciel"), scrollContent);
     auto *editionLayout = new QVBoxLayout(editionGroup);
     auto *editionIntro = new QLabel(
-        QStringLiteral("La version de base est adaptée au grand public, au scolaire et au laboratoire — "
-                        "chaque édition active les options qui lui conviennent."),
+        tr("La version de base est adaptée au grand public, au scolaire et au laboratoire — "
+           "chaque édition active les options qui lui conviennent."),
         editionGroup);
     editionIntro->setWordWrap(true);
     editionLayout->addWidget(editionIntro);
 
     auto *editionCombo = new QComboBox(editionGroup);
-    editionCombo->addItem(QStringLiteral("Scolaire (salle de classe)"), QStringLiteral("school"));
-    editionCombo->addItem(QStringLiteral("Grand public"), QStringLiteral("public"));
-    editionCombo->addItem(QStringLiteral("Laboratoire"), QStringLiteral("lab"));
+    editionCombo->addItem(tr("Scolaire (salle de classe)"), QStringLiteral("school"));
+    editionCombo->addItem(tr("Grand public"), QStringLiteral("public"));
+    editionCombo->addItem(tr("Laboratoire"), QStringLiteral("lab"));
     const int editionIndex = editionCombo->findData(m_settings->appMode());
     editionCombo->setCurrentIndex(editionIndex >= 0 ? editionIndex : 1);
     editionLayout->addWidget(editionCombo);
 
     // ---- Fonctionnalités supplémentaires (emprunter aux autres éditions) ----
-    auto *featuresGroup = new QGroupBox(QStringLiteral("Fonctionnalités supplémentaires"), scrollContent);
+    auto *featuresGroup = new QGroupBox(tr("Fonctionnalités supplémentaires"), scrollContent);
     auto *featuresLayout = new QVBoxLayout(featuresGroup);
     auto *featuresIntro = new QLabel(
-        QStringLiteral("Ajoutez à votre édition les fonctionnalités des autres (changer d'édition ci-dessus "
-                        "remet ces cases aux valeurs par défaut de l'édition choisie) :"),
+        tr("Ajoutez à votre édition les fonctionnalités des autres (changer d'édition ci-dessus "
+           "remet ces cases aux valeurs par défaut de l'édition choisie) :"),
         featuresGroup);
     featuresIntro->setWordWrap(true);
     featuresLayout->addWidget(featuresIntro);
 
-    auto *featureClassesCheck = new QCheckBox(QStringLiteral("Classes et groupes (scolaire)"), featuresGroup);
-    auto *featurePinCheck = new QCheckBox(QStringLiteral("Code PIN professeur et verrouillage (scolaire)"), featuresGroup);
-    auto *featureTimerCheck = new QCheckBox(QStringLiteral("Minuteur d'observation (scolaire)"), featuresGroup);
-    auto *featureAidsCheck = new QCheckBox(QStringLiteral("Schéma du microscope et glossaire (scolaire/grand public)"), featuresGroup);
-    auto *featureLabToolsCheck = new QCheckBox(QStringLiteral("Format photo TIFF/JPG et métadonnées (laboratoire)"), featuresGroup);
+    auto *featureClassesCheck = new QCheckBox(tr("Classes et groupes (scolaire)"), featuresGroup);
+    auto *featurePinCheck = new QCheckBox(tr("Code PIN professeur et verrouillage (scolaire)"), featuresGroup);
+    auto *featureTimerCheck = new QCheckBox(tr("Minuteur d'observation (scolaire)"), featuresGroup);
+    auto *featureAidsCheck = new QCheckBox(tr("Schéma du microscope et glossaire (scolaire/grand public)"), featuresGroup);
+    auto *featureLabToolsCheck = new QCheckBox(tr("Format photo TIFF/JPG et métadonnées (laboratoire)"), featuresGroup);
     auto refreshFeatureChecks = [this, featureClassesCheck, featurePinCheck, featureTimerCheck,
                                   featureAidsCheck, featureLabToolsCheck]() {
         featureClassesCheck->setChecked(m_settings->featureClassesEnabled());
@@ -133,8 +134,8 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     featuresLayout->addWidget(featureLabToolsCheck);
 
     auto *featuresNote = new QLabel(
-        QStringLiteral("Les sections correspondantes apparaissent ou disparaissent à la réouverture de "
-                        "cette fenêtre."),
+        tr("Les sections correspondantes apparaissent ou disparaissent à la réouverture de "
+           "cette fenêtre."),
         featuresGroup);
     featuresNote->setWordWrap(true);
     featuresLayout->addWidget(featuresNote);
@@ -144,7 +145,7 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
                 m_settings->setAppMode(editionCombo->itemData(index).toString());
                 refreshFeatureChecks();
                 setWindowTitle(m_settings->appMode() == QLatin1String("school")
-                    ? QStringLiteral("Mode professeur") : QStringLiteral("Réglages avancés"));
+                    ? tr("Mode professeur") : tr("Réglages avancés"));
             });
     connect(featureClassesCheck, &QCheckBox::toggled, m_settings, &AppSettings::setFeatureClassesEnabled);
     connect(featurePinCheck, &QCheckBox::toggled, m_settings, &AppSettings::setFeaturePinLockEnabled);
@@ -155,10 +156,10 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     leftColumn->addWidget(editionGroup);
     leftColumn->addWidget(featuresGroup);
 
-    auto *cameraGroup = new QGroupBox(QStringLiteral("Caméra"), scrollContent);
+    auto *cameraGroup = new QGroupBox(tr("Caméra"), scrollContent);
     auto *cameraForm = new QFormLayout(cameraGroup);
 
-    m_autoExposureCheck = new QCheckBox(QStringLiteral("Exposition automatique"), cameraGroup);
+    m_autoExposureCheck = new QCheckBox(tr("Exposition automatique"), cameraGroup);
     m_autoExposureCheck->setChecked(backend->autoExposure());
     cameraForm->addRow(m_autoExposureCheck);
 
@@ -176,9 +177,9 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     exposureRowLayout->setContentsMargins(0, 0, 0, 0);
     exposureRowLayout->addWidget(m_exposureSlider, 1);
     exposureRowLayout->addWidget(m_exposureValueLabel);
-    cameraForm->addRow(QStringLiteral("Exposition manuelle"), exposureRow);
+    cameraForm->addRow(tr("Exposition manuelle"), exposureRow);
 
-    m_autoWhiteBalanceCheck = new QCheckBox(QStringLiteral("Balance des blancs automatique"), cameraGroup);
+    m_autoWhiteBalanceCheck = new QCheckBox(tr("Balance des blancs automatique"), cameraGroup);
     m_autoWhiteBalanceCheck->setChecked(backend->autoWhiteBalance());
     cameraForm->addRow(m_autoWhiteBalanceCheck);
 
@@ -195,7 +196,7 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     gainRowLayout->setContentsMargins(0, 0, 0, 0);
     gainRowLayout->addWidget(m_gainSlider, 1);
     gainRowLayout->addWidget(m_gainValueLabel);
-    cameraForm->addRow(QStringLiteral("Gain"), gainRow);
+    cameraForm->addRow(tr("Gain"), gainRow);
 
     m_resolutionCombo = new QComboBox(cameraGroup);
     const QVector<QSize> resolutions = backend->supportedResolutions();
@@ -204,40 +205,72 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     const int currentIndex = m_resolutionCombo->findData(backend->currentResolution());
     if (currentIndex >= 0)
         m_resolutionCombo->setCurrentIndex(currentIndex);
-    cameraForm->addRow(QStringLiteral("Résolution"), m_resolutionCombo);
+    cameraForm->addRow(tr("Résolution"), m_resolutionCombo);
 
     leftColumn->addWidget(cameraGroup);
 
-    auto *displayGroup = new QGroupBox(QStringLiteral("Affichage"), scrollContent);
+    auto *displayGroup = new QGroupBox(tr("Affichage"), scrollContent);
     auto *displayLayout = new QVBoxLayout(displayGroup);
-    m_monochromeCheck = new QCheckBox(QStringLiteral("Affichage noir et blanc"), displayGroup);
+    m_monochromeCheck = new QCheckBox(tr("Affichage noir et blanc"), displayGroup);
     m_monochromeCheck->setChecked(m_settings->monochromeDisplay());
     displayLayout->addWidget(m_monochromeCheck);
-    m_lightThemeCheck = new QCheckBox(QStringLiteral("Thème clair (au lieu de sombre)"), displayGroup);
+    m_lightThemeCheck = new QCheckBox(tr("Thème clair (au lieu de sombre)"), displayGroup);
     m_lightThemeCheck->setChecked(m_settings->lightTheme());
     displayLayout->addWidget(m_lightThemeCheck);
-    m_gridCheck = new QCheckBox(QStringLiteral("Grille de cadrage (règle des tiers)"), displayGroup);
+    m_gridCheck = new QCheckBox(tr("Grille de cadrage (règle des tiers)"), displayGroup);
     m_gridCheck->setChecked(m_settings->showGrid());
     displayLayout->addWidget(m_gridCheck);
-    m_focusIndicatorCheck = new QCheckBox(QStringLiteral("Indicateur de netteté"), displayGroup);
+    m_focusIndicatorCheck = new QCheckBox(tr("Indicateur de netteté"), displayGroup);
     m_focusIndicatorCheck->setChecked(m_settings->showFocusIndicator());
     displayLayout->addWidget(m_focusIndicatorCheck);
 
-    m_scaleBarCheck = new QCheckBox(QStringLiteral("Afficher une échelle de mesure"), displayGroup);
+    m_soundNotificationsCheck = new QCheckBox(
+        tr("Bip sonore (fin d'enregistrement, minuteur terminé)"), displayGroup);
+    m_soundNotificationsCheck->setChecked(m_settings->soundNotificationsEnabled());
+    displayLayout->addWidget(m_soundNotificationsCheck);
+
+    auto *languageRow = new QWidget(displayGroup);
+    auto *languageRowLayout = new QHBoxLayout(languageRow);
+    languageRowLayout->setContentsMargins(0, 0, 0, 0);
+    auto *languageLabel = new QLabel(tr("Langue de l'interface"), languageRow);
+    m_languageCombo = new QComboBox(languageRow);
+    m_languageCombo->addItem(QStringLiteral("Français"), QStringLiteral("fr"));
+    m_languageCombo->addItem(QStringLiteral("English"), QStringLiteral("en"));
+    m_languageCombo->setCurrentIndex(m_settings->uiLanguage() == QLatin1String("en") ? 1 : 0);
+    languageRowLayout->addWidget(languageLabel, 1);
+    languageRowLayout->addWidget(m_languageCombo);
+    displayLayout->addWidget(languageRow);
+
+    // Caps the student-facing brightness slider on the main screen (bottom
+    // bar) so the class can't crank it up enough to wash the image out.
+    auto *maxBrightnessRow = new QWidget(displayGroup);
+    auto *maxBrightnessRowLayout = new QHBoxLayout(maxBrightnessRow);
+    maxBrightnessRowLayout->setContentsMargins(0, 0, 0, 0);
+    auto *maxBrightnessLabel = new QLabel(tr("Limite de luminosité pour les élèves"), maxBrightnessRow);
+    m_maxBrightnessSpin = new QSpinBox(maxBrightnessRow);
+    m_maxBrightnessSpin->setRange(10, 100);
+    m_maxBrightnessSpin->setSuffix(QStringLiteral(" %"));
+    m_maxBrightnessSpin->setValue(m_settings->maxBrightnessPercent());
+    m_maxBrightnessSpin->setMinimumWidth(widthForWidestText(m_maxBrightnessSpin, QStringLiteral("100 %"), 40));
+    maxBrightnessRowLayout->addWidget(maxBrightnessLabel, 1);
+    maxBrightnessRowLayout->addWidget(m_maxBrightnessSpin);
+    displayLayout->addWidget(maxBrightnessRow);
+
+    m_scaleBarCheck = new QCheckBox(tr("Afficher une échelle de mesure"), displayGroup);
     m_scaleBarCheck->setChecked(m_settings->showScaleBar());
     displayLayout->addWidget(m_scaleBarCheck);
 
     auto *scaleBarRow = new QWidget(displayGroup);
     auto *scaleBarRowLayout = new QHBoxLayout(scaleBarRow);
     scaleBarRowLayout->setContentsMargins(24, 0, 0, 0);
-    auto *scaleBarLabel = new QLabel(QStringLiteral("Étalonnage : µm pour 100 px de l'image"), scaleBarRow);
+    auto *scaleBarLabel = new QLabel(tr("Étalonnage : µm pour 100 px de l'image"), scaleBarRow);
     m_scaleBarCalibrationSpin = new QDoubleSpinBox(scaleBarRow);
     m_scaleBarCalibrationSpin->setRange(0.0, 100000.0);
     m_scaleBarCalibrationSpin->setDecimals(1);
     m_scaleBarCalibrationSpin->setValue(m_settings->scaleBarMicronsPer100Px());
     m_scaleBarCalibrationSpin->setMinimumWidth(
         widthForWidestText(m_scaleBarCalibrationSpin, QStringLiteral("100000.0"), 40));
-    auto *calibrationWizardButton = new QPushButton(QStringLiteral("Étalonner avec la caméra..."), scaleBarRow);
+    auto *calibrationWizardButton = new QPushButton(tr("Étalonner avec la caméra..."), scaleBarRow);
     scaleBarRowLayout->addWidget(scaleBarLabel, 1);
     scaleBarRowLayout->addWidget(m_scaleBarCalibrationSpin);
     displayLayout->addWidget(scaleBarRow);
@@ -251,16 +284,16 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     leftColumn->addWidget(displayGroup);
     leftColumn->addStretch();
 
-    auto *timeLapseGroup = new QGroupBox(QStringLiteral("Accéléré (time-lapse)"), scrollContent);
+    auto *timeLapseGroup = new QGroupBox(tr("Accéléré (time-lapse)"), scrollContent);
     auto *timeLapseLayout = new QVBoxLayout(timeLapseGroup);
-    m_timeLapseCheck = new QCheckBox(QStringLiteral("Activer la capture accélérée"), timeLapseGroup);
+    m_timeLapseCheck = new QCheckBox(tr("Activer la capture accélérée"), timeLapseGroup);
     m_timeLapseCheck->setChecked(m_settings->timeLapseEnabled());
     timeLapseLayout->addWidget(m_timeLapseCheck);
 
     auto *timeLapseRow = new QWidget(timeLapseGroup);
     auto *timeLapseRowLayout = new QHBoxLayout(timeLapseRow);
     timeLapseRowLayout->setContentsMargins(24, 0, 0, 0);
-    auto *timeLapseLabel = new QLabel(QStringLiteral("Intervalle"), timeLapseRow);
+    auto *timeLapseLabel = new QLabel(tr("Intervalle"), timeLapseRow);
     m_timeLapseIntervalSpin = new QSpinBox(timeLapseRow);
     m_timeLapseIntervalSpin->setRange(5, 3600);
     m_timeLapseIntervalSpin->setSuffix(QStringLiteral(" s"));
@@ -272,7 +305,7 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
 
     rightColumn->addWidget(timeLapseGroup);
 
-    auto *storageGroup = new QGroupBox(QStringLiteral("Enregistrement"), scrollContent);
+    auto *storageGroup = new QGroupBox(tr("Enregistrement"), scrollContent);
     auto *storageForm = new QFormLayout(storageGroup);
 
     auto *folderRow = new QWidget(storageGroup);
@@ -280,29 +313,29 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     folderLayout->setContentsMargins(0, 0, 0, 0);
     m_folderEdit = new QLineEdit(m_settings->captureFolder(), folderRow);
     m_folderEdit->setReadOnly(true);
-    auto *browseButton = new QPushButton(QStringLiteral("Parcourir..."), folderRow);
+    auto *browseButton = new QPushButton(tr("Parcourir..."), folderRow);
     folderLayout->addWidget(m_folderEdit, 1);
     folderLayout->addWidget(browseButton);
-    storageForm->addRow(QStringLiteral("Dossier"), folderRow);
+    storageForm->addRow(tr("Dossier"), folderRow);
 
     if (m_settings->featureLabToolsEnabled()) {
         // Lab-friendly photo format choice: PNG (lossless, default), TIFF
         // (the usual archival/analysis format in lab pipelines), JPG (small).
         auto *photoFormatCombo = new QComboBox(storageGroup);
-        photoFormatCombo->addItem(QStringLiteral("PNG (sans perte)"), QStringLiteral("png"));
-        photoFormatCombo->addItem(QStringLiteral("TIFF (archivage/analyse)"), QStringLiteral("tiff"));
-        photoFormatCombo->addItem(QStringLiteral("JPG (léger)"), QStringLiteral("jpg"));
+        photoFormatCombo->addItem(tr("PNG (sans perte)"), QStringLiteral("png"));
+        photoFormatCombo->addItem(tr("TIFF (archivage/analyse)"), QStringLiteral("tiff"));
+        photoFormatCombo->addItem(tr("JPG (léger)"), QStringLiteral("jpg"));
         const int formatIndex = photoFormatCombo->findData(m_settings->photoFormat());
         photoFormatCombo->setCurrentIndex(formatIndex >= 0 ? formatIndex : 0);
         connect(photoFormatCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
                 [this, photoFormatCombo](int index) {
                     m_settings->setPhotoFormat(photoFormatCombo->itemData(index).toString());
                 });
-        storageForm->addRow(QStringLiteral("Format photo"), photoFormatCombo);
+        storageForm->addRow(tr("Format photo"), photoFormatCombo);
 
         auto *metadataCheck = new QCheckBox(
-            QStringLiteral("Enregistrer un fichier de métadonnées (.txt) avec chaque photo"), storageGroup);
-        metadataCheck->setToolTip(QStringLiteral(
+            tr("Enregistrer un fichier de métadonnées (.txt) avec chaque photo"), storageGroup);
+        metadataCheck->setToolTip(tr(
             "Date, résolution, exposition, gain, étalonnage de l'échelle, nom du microscope — "
             "à côté de chaque photo, pour la traçabilité des observations."));
         metadataCheck->setChecked(m_settings->saveCaptureMetadata());
@@ -313,17 +346,17 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     // The user names their own microscope; shown in the top bar title and
     // the info panel instead of a hardcoded model.
     auto *microscopeNameEdit = new QLineEdit(m_settings->microscopeName(), storageGroup);
-    microscopeNameEdit->setPlaceholderText(QStringLiteral("ex : OMAX 83S, Bresser Erudit..."));
+    microscopeNameEdit->setPlaceholderText(tr("ex : OMAX 83S, Bresser Erudit..."));
     connect(microscopeNameEdit, &QLineEdit::textChanged, m_settings, &AppSettings::setMicroscopeName);
-    storageForm->addRow(QStringLiteral("Nom du microscope"), microscopeNameEdit);
+    storageForm->addRow(tr("Nom du microscope"), microscopeNameEdit);
 
     rightColumn->addWidget(storageGroup);
 
     if (m_settings->featureClassesEnabled()) {
-        auto *classesGroup = new QGroupBox(QStringLiteral("Classes et groupes"), scrollContent);
+        auto *classesGroup = new QGroupBox(tr("Classes et groupes"), scrollContent);
         auto *classesLayout = new QVBoxLayout(classesGroup);
-        auto *manageClassesButton = new QPushButton(QStringLiteral("Gérer les classes et groupes..."), classesGroup);
-        auto *overviewButton = new QPushButton(QStringLiteral("Vue d'ensemble des groupes..."), classesGroup);
+        auto *manageClassesButton = new QPushButton(tr("Gérer les classes et groupes..."), classesGroup);
+        auto *overviewButton = new QPushButton(tr("Vue d'ensemble des groupes..."), classesGroup);
         classesLayout->addWidget(manageClassesButton);
         classesLayout->addWidget(overviewButton);
         rightColumn->addWidget(classesGroup);
@@ -332,17 +365,17 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     }
 
     if (m_settings->featureLabTimerEnabled()) {
-        auto *timerGroup = new QGroupBox(QStringLiteral("Minuteur d'observation"), scrollContent);
+        auto *timerGroup = new QGroupBox(tr("Minuteur d'observation"), scrollContent);
         auto *timerLayout = new QHBoxLayout(timerGroup);
-        auto *timerLabel = new QLabel(QStringLiteral("Durée"), timerGroup);
+        auto *timerLabel = new QLabel(tr("Durée"), timerGroup);
         m_labTimerMinutesSpin = new QSpinBox(timerGroup);
         m_labTimerMinutesSpin->setRange(1, 180);
         m_labTimerMinutesSpin->setSuffix(QStringLiteral(" min"));
         m_labTimerMinutesSpin->setValue(10);
         m_labTimerMinutesSpin->setMinimumWidth(
             widthForWidestText(m_labTimerMinutesSpin, QStringLiteral("180 min"), 40));
-        auto *labTimerStartButton = new QPushButton(QStringLiteral("Démarrer"), timerGroup);
-        auto *labTimerStopButton = new QPushButton(QStringLiteral("Arrêter"), timerGroup);
+        auto *labTimerStartButton = new QPushButton(tr("Démarrer"), timerGroup);
+        auto *labTimerStopButton = new QPushButton(tr("Arrêter"), timerGroup);
         timerLayout->addWidget(timerLabel);
         timerLayout->addWidget(m_labTimerMinutesSpin);
         timerLayout->addWidget(labTimerStartButton);
@@ -355,9 +388,9 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
         connect(labTimerStopButton, &QPushButton::clicked, this, &TeacherPanel::labTimerStopRequested);
     }
 
-    auto *backupGroup = new QGroupBox(QStringLiteral("Sauvegarde automatique"), scrollContent);
+    auto *backupGroup = new QGroupBox(tr("Sauvegarde automatique"), scrollContent);
     auto *backupLayout = new QVBoxLayout(backupGroup);
-    m_autoBackupCheck = new QCheckBox(QStringLiteral("Activer la sauvegarde automatique"), backupGroup);
+    m_autoBackupCheck = new QCheckBox(tr("Activer la sauvegarde automatique"), backupGroup);
     m_autoBackupCheck->setChecked(m_settings->autoBackupEnabled());
     backupLayout->addWidget(m_autoBackupCheck);
 
@@ -366,8 +399,8 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     backupDestLayout->setContentsMargins(0, 0, 0, 0);
     m_autoBackupDestEdit = new QLineEdit(m_settings->autoBackupDestination(), backupDestRow);
     m_autoBackupDestEdit->setReadOnly(true);
-    m_autoBackupDestEdit->setPlaceholderText(QStringLiteral("Aucune destination choisie"));
-    auto *chooseBackupDestButton = new QPushButton(QStringLiteral("Choisir..."), backupDestRow);
+    m_autoBackupDestEdit->setPlaceholderText(tr("Aucune destination choisie"));
+    auto *chooseBackupDestButton = new QPushButton(tr("Choisir..."), backupDestRow);
     backupDestLayout->addWidget(m_autoBackupDestEdit, 1);
     backupDestLayout->addWidget(chooseBackupDestButton);
     backupLayout->addWidget(backupDestRow);
@@ -375,14 +408,14 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     auto *backupIntervalRow = new QWidget(backupGroup);
     auto *backupIntervalLayout = new QHBoxLayout(backupIntervalRow);
     backupIntervalLayout->setContentsMargins(0, 0, 0, 0);
-    auto *backupIntervalLabel = new QLabel(QStringLiteral("Tous les"), backupIntervalRow);
+    auto *backupIntervalLabel = new QLabel(tr("Tous les"), backupIntervalRow);
     m_autoBackupIntervalSpin = new QSpinBox(backupIntervalRow);
     m_autoBackupIntervalSpin->setRange(1, 90);
     m_autoBackupIntervalSpin->setSuffix(QStringLiteral(" jours"));
     m_autoBackupIntervalSpin->setValue(m_settings->autoBackupIntervalDays());
     m_autoBackupIntervalSpin->setMinimumWidth(
         widthForWidestText(m_autoBackupIntervalSpin, QStringLiteral("90 jours"), 40));
-    auto *backupNowButton = new QPushButton(QStringLiteral("Sauvegarder maintenant"), backupIntervalRow);
+    auto *backupNowButton = new QPushButton(tr("Sauvegarder maintenant"), backupIntervalRow);
     backupIntervalLayout->addWidget(backupIntervalLabel);
     backupIntervalLayout->addWidget(m_autoBackupIntervalSpin);
     backupIntervalLayout->addStretch();
@@ -396,17 +429,17 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     rightColumn->addWidget(backupGroup);
 
     if (m_settings->featurePinLockEnabled()) {
-        auto *lockGroup = new QGroupBox(QStringLiteral("Verrouillage"), scrollContent);
+        auto *lockGroup = new QGroupBox(tr("Verrouillage"), scrollContent);
         auto *lockLayout = new QVBoxLayout(lockGroup);
         m_studentLockCheck = new QCheckBox(
-            QStringLiteral("Verrouiller le mode élève (code PIN requis pour fermer l'application)"), lockGroup);
+            tr("Verrouiller le mode élève (code PIN requis pour fermer l'application)"), lockGroup);
         m_studentLockCheck->setChecked(m_settings->studentModeLocked());
         lockLayout->addWidget(m_studentLockCheck);
         rightColumn->addWidget(lockGroup);
-        connect(m_studentLockCheck, &QCheckBox::toggled, m_settings, &AppSettings::setStudentModeLocked);
+        connect(m_studentLockCheck, &QCheckBox::toggled, this, &TeacherPanel::onStudentLockToggled);
     }
 
-    auto *securityGroup = new QGroupBox(QStringLiteral("Sécurité et veille"), scrollContent);
+    auto *securityGroup = new QGroupBox(tr("Sécurité et veille"), scrollContent);
     auto *securityForm = new QFormLayout(securityGroup);
 
     if (m_settings->featurePinLockEnabled()) {
@@ -415,33 +448,33 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
         pinLayout->setContentsMargins(0, 0, 0, 0);
         m_newPinEdit = new QLineEdit(pinRow);
         m_newPinEdit->setEchoMode(QLineEdit::Password);
-        m_newPinEdit->setPlaceholderText(QStringLiteral("Nouveau PIN"));
+        m_newPinEdit->setPlaceholderText(tr("Nouveau PIN"));
         m_confirmPinEdit = new QLineEdit(pinRow);
         m_confirmPinEdit->setEchoMode(QLineEdit::Password);
-        m_confirmPinEdit->setPlaceholderText(QStringLiteral("Confirmer"));
-        auto *changePinButton = new QPushButton(QStringLiteral("Changer"), pinRow);
+        m_confirmPinEdit->setPlaceholderText(tr("Confirmer"));
+        auto *changePinButton = new QPushButton(tr("Changer"), pinRow);
         pinLayout->addWidget(m_newPinEdit);
         pinLayout->addWidget(m_confirmPinEdit);
         pinLayout->addWidget(changePinButton);
-        securityForm->addRow(QStringLiteral("Code PIN"), pinRow);
+        securityForm->addRow(tr("Code PIN"), pinRow);
         connect(changePinButton, &QPushButton::clicked, this, &TeacherPanel::onChangePin);
     }
 
     m_idleTimeoutSpin = new QSpinBox(securityGroup);
     m_idleTimeoutSpin->setRange(0, 60);
     m_idleTimeoutSpin->setSuffix(QStringLiteral(" min"));
-    m_idleTimeoutSpin->setSpecialValueText(QStringLiteral("Désactivée"));
+    m_idleTimeoutSpin->setSpecialValueText(tr("Désactivée"));
     // Sized off the widest string it'll ever show ("Désactivée"), measured
     // in its own real font, rather than a flat guess — a fixed pixel width
     // kept clipping on some displays regardless of how generous it was.
-    m_idleTimeoutSpin->setMinimumWidth(widthForWidestText(m_idleTimeoutSpin, QStringLiteral("Désactivée"), 40));
+    m_idleTimeoutSpin->setMinimumWidth(widthForWidestText(m_idleTimeoutSpin, tr("Désactivée"), 40));
     m_idleTimeoutSpin->setValue(m_settings->idleTimeoutMinutes());
-    securityForm->addRow(QStringLiteral("Veille après"), m_idleTimeoutSpin);
+    securityForm->addRow(tr("Veille après"), m_idleTimeoutSpin);
 
     rightColumn->addWidget(securityGroup);
     rightColumn->addStretch();
 
-    auto *closeButton = new QPushButton(QStringLiteral("Fermer"), this);
+    auto *closeButton = new QPushButton(tr("Fermer"), this);
     root->addWidget(closeButton);
 
     connect(m_autoExposureCheck, &QCheckBox::toggled, this, &TeacherPanel::onAutoExposureToggled);
@@ -452,6 +485,9 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
             this, &TeacherPanel::onResolutionChanged);
     connect(m_monochromeCheck, &QCheckBox::toggled, m_settings, &AppSettings::setMonochromeDisplay);
     connect(m_lightThemeCheck, &QCheckBox::toggled, m_settings, &AppSettings::setLightTheme);
+    connect(m_soundNotificationsCheck, &QCheckBox::toggled, m_settings, &AppSettings::setSoundNotificationsEnabled);
+    connect(m_languageCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &TeacherPanel::onLanguageChanged);
+    connect(m_maxBrightnessSpin, QOverload<int>::of(&QSpinBox::valueChanged), m_settings, &AppSettings::setMaxBrightnessPercent);
     connect(m_gridCheck, &QCheckBox::toggled, m_settings, &AppSettings::setShowGrid);
     connect(m_focusIndicatorCheck, &QCheckBox::toggled, m_settings, &AppSettings::setShowFocusIndicator);
     connect(m_scaleBarCheck, &QCheckBox::toggled, m_settings, &AppSettings::setShowScaleBar);
@@ -476,8 +512,8 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
 void TeacherPanel::refreshCameraInfo()
 {
     m_cameraInfoLabel->setText(m_backend->isOpen()
-        ? QStringLiteral("Backend : %1 — connectée").arg(m_backend->backendName())
-        : QStringLiteral("Backend : %1 — aucune caméra détectée").arg(m_backend->backendName()));
+        ? tr("Backend : %1 — connectée").arg(m_backend->backendName())
+        : tr("Backend : %1 — aucune caméra détectée").arg(m_backend->backendName()));
 }
 
 void TeacherPanel::onAutoExposureToggled(bool checked)
@@ -512,7 +548,7 @@ void TeacherPanel::onResolutionChanged(int index)
 
 void TeacherPanel::onBrowseFolder()
 {
-    const QString folder = QFileDialog::getExistingDirectory(this, QStringLiteral("Dossier d'enregistrement"),
+    const QString folder = QFileDialog::getExistingDirectory(this, tr("Dossier d'enregistrement"),
                                                                m_folderEdit->text());
     if (folder.isEmpty())
         return;
@@ -531,18 +567,68 @@ void TeacherPanel::onChangePin()
 {
     const QString newPin = m_newPinEdit->text();
     if (newPin.length() < 4) {
-        QMessageBox::warning(this, QStringLiteral("Code PIN"), QStringLiteral("Le code PIN doit contenir au moins 4 chiffres."));
+        QMessageBox::warning(this, tr("Code PIN"), tr("Le code PIN doit contenir au moins 4 chiffres."));
         return;
     }
     if (newPin != m_confirmPinEdit->text()) {
-        QMessageBox::warning(this, QStringLiteral("Code PIN"), QStringLiteral("Les deux codes PIN ne correspondent pas."));
+        QMessageBox::warning(this, tr("Code PIN"), tr("Les deux codes PIN ne correspondent pas."));
         return;
     }
 
     m_settings->setTeacherPin(newPin);
     m_newPinEdit->clear();
     m_confirmPinEdit->clear();
-    QMessageBox::information(this, QStringLiteral("Code PIN"), QStringLiteral("Code PIN mis à jour."));
+    QMessageBox::information(this, tr("Code PIN"), tr("Code PIN mis à jour."));
+}
+
+void TeacherPanel::onStudentLockToggled(bool checked)
+{
+    // Locking is meaningless without a PIN to unlock with — rather than let
+    // the checkbox silently do nothing (the Windows 7 bug report: closing
+    // worked with no password because no PIN had ever been set), require
+    // one to be created right here before the lock takes effect.
+    if (checked && m_settings->teacherPinHash().isEmpty()) {
+        bool ok = false;
+        const QString newPin = QInputDialog::getText(
+            this, tr("Code PIN requis"),
+            tr("Verrouiller la fermeture exige un code PIN professeur.\n"
+               "Choisissez un code PIN (4 chiffres minimum) :"),
+            QLineEdit::Password, QString(), &ok);
+        if (!ok) {
+            m_studentLockCheck->setChecked(false);
+            return;
+        }
+        if (newPin.length() < 4) {
+            QMessageBox::warning(this, tr("Code PIN"), tr("Le code PIN doit contenir au moins 4 chiffres."));
+            m_studentLockCheck->setChecked(false);
+            return;
+        }
+        bool okConfirm = false;
+        const QString confirmPin = QInputDialog::getText(this, tr("Confirmer le code PIN"),
+                                                           tr("Confirmez le code PIN :"),
+                                                           QLineEdit::Password, QString(), &okConfirm);
+        if (!okConfirm || confirmPin != newPin) {
+            QMessageBox::warning(this, tr("Code PIN"), tr("Les deux codes PIN ne correspondent pas."));
+            m_studentLockCheck->setChecked(false);
+            return;
+        }
+        m_settings->setTeacherPin(newPin);
+    }
+    m_settings->setStudentModeLocked(checked);
+}
+
+void TeacherPanel::onLanguageChanged(int index)
+{
+    const QString language = m_languageCombo->itemData(index).toString();
+    if (language == m_settings->uiLanguage())
+        return;
+    m_settings->setUiLanguage(language);
+    // Every widget in this app sets its text once at construction (no
+    // Qt Linguist-style retranslateUi()), so the new language only takes
+    // effect after a full restart — simpler and far less code than wiring
+    // live retranslation into every dialog.
+    QMessageBox::information(this, tr("Langue de l'interface"),
+                              tr("Redémarrez E-Lab 700 pour appliquer le changement de langue."));
 }
 
 void TeacherPanel::onIdleTimeoutChanged(int minutes)
@@ -559,8 +645,8 @@ void TeacherPanel::onOpenCalibrationWizard()
 {
     const QImage snapshot = m_frameProvider ? m_frameProvider() : QImage();
     if (snapshot.isNull()) {
-        QMessageBox::warning(this, QStringLiteral("Étalonnage"),
-                              QStringLiteral("Aucune image de caméra disponible pour le moment."));
+        QMessageBox::warning(this, tr("Étalonnage"),
+                              tr("Aucune image de caméra disponible pour le moment."));
         return;
     }
 
@@ -579,7 +665,7 @@ void TeacherPanel::onOpenOverview()
 
 void TeacherPanel::onChooseBackupDestination()
 {
-    const QString folder = QFileDialog::getExistingDirectory(this, QStringLiteral("Destination de la sauvegarde"),
+    const QString folder = QFileDialog::getExistingDirectory(this, tr("Destination de la sauvegarde"),
                                                                m_autoBackupDestEdit->text());
     if (folder.isEmpty())
         return;
@@ -592,30 +678,30 @@ void TeacherPanel::onAutoBackupNow()
 {
     const QString destinationRoot = m_settings->autoBackupDestination();
     if (destinationRoot.isEmpty()) {
-        QMessageBox::warning(this, QStringLiteral("Sauvegarde"),
-                              QStringLiteral("Choisissez d'abord une destination de sauvegarde."));
+        QMessageBox::warning(this, tr("Sauvegarde"),
+                              tr("Choisissez d'abord une destination de sauvegarde."));
         return;
     }
 
     const QString timestamp = QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_HHmmss"));
-    const QString destination = QDir(destinationRoot).filePath(QStringLiteral("E-Lab700_Sauvegarde_%1").arg(timestamp));
+    const QString destination = QDir(destinationRoot).filePath(tr("E-Lab700_Sauvegarde_%1").arg(timestamp));
 
     if (!FileUtils::copyFolderRecursively(m_settings->captureFolder(), destination, GalleryModel::trashFolderName())) {
-        QMessageBox::warning(this, QStringLiteral("Sauvegarde"),
-                              QStringLiteral("La sauvegarde a échoué ou est incomplète. Vérifiez l'espace disponible."));
+        QMessageBox::warning(this, tr("Sauvegarde"),
+                              tr("La sauvegarde a échoué ou est incomplète. Vérifiez l'espace disponible."));
         return;
     }
 
     m_settings->setLastAutoBackupAt(QDateTime::currentDateTime());
     refreshAutoBackupLastLabel();
-    QMessageBox::information(this, QStringLiteral("Sauvegarde"),
-                              QStringLiteral("Sauvegarde effectuée :\n%1").arg(destination));
+    QMessageBox::information(this, tr("Sauvegarde"),
+                              tr("Sauvegarde effectuée :\n%1").arg(destination));
 }
 
 void TeacherPanel::refreshAutoBackupLastLabel()
 {
     const QDateTime last = m_settings->lastAutoBackupAt();
     m_autoBackupLastLabel->setText(last.isValid()
-        ? QStringLiteral("Dernière sauvegarde : %1").arg(last.toString(QStringLiteral("dd/MM/yyyy HH:mm")))
-        : QStringLiteral("Dernière sauvegarde : jamais"));
+        ? tr("Dernière sauvegarde : %1").arg(last.toString(QStringLiteral("dd/MM/yyyy HH:mm")))
+        : tr("Dernière sauvegarde : jamais"));
 }

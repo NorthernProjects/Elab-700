@@ -18,6 +18,9 @@ constexpr auto kLightThemeKey = "display/lightTheme";
 constexpr auto kClassesKey = "classes/json";
 constexpr auto kShowGridKey = "display/showGrid";
 constexpr auto kShowFocusIndicatorKey = "display/showFocusIndicator";
+constexpr auto kMaxBrightnessKey = "display/maxBrightnessPercent";
+constexpr auto kSoundNotificationsKey = "notifications/soundEnabled";
+constexpr auto kUiLanguageKey = "app/uiLanguage";
 constexpr auto kTimeLapseEnabledKey = "timelapse/enabled";
 constexpr auto kTimeLapseIntervalKey = "timelapse/intervalSeconds";
 constexpr auto kShowScaleBarKey = "scalebar/show";
@@ -46,6 +49,10 @@ constexpr int kDefaultAutoBackupIntervalDays = 7;
 constexpr double kDefaultScaleBarMicronsPer100Px = 500.0;
 constexpr auto kDefaultPin = "1234"; // documented in README; teacher should change it on first use
 constexpr int kDefaultIdleTimeoutMinutes = 5;
+// Normalized 0-100 (see CameraBackend::setBrightness) — well above the
+// sensor's native midpoint but short of full overexposure, so the default
+// ceiling still leaves the image usable if students slide all the way up.
+constexpr int kDefaultMaxBrightnessPercent = 75;
 
 // Windows forbids these in folder names; capture subfolders are built from
 // teacher-entered class/group names so this can't be skipped.
@@ -139,6 +146,45 @@ void AppSettings::setIdleTimeoutMinutes(int minutes)
     QSettings settings;
     settings.setValue(kIdleTimeoutKey, minutes);
     emit idleTimeoutMinutesChanged(minutes);
+}
+
+int AppSettings::maxBrightnessPercent() const
+{
+    QSettings settings;
+    return settings.value(kMaxBrightnessKey, kDefaultMaxBrightnessPercent).toInt();
+}
+
+void AppSettings::setMaxBrightnessPercent(int percent)
+{
+    QSettings settings;
+    settings.setValue(kMaxBrightnessKey, percent);
+    emit maxBrightnessPercentChanged(percent);
+}
+
+bool AppSettings::soundNotificationsEnabled() const
+{
+    QSettings settings;
+    return settings.value(kSoundNotificationsKey, false).toBool();
+}
+
+void AppSettings::setSoundNotificationsEnabled(bool enabled)
+{
+    QSettings settings;
+    settings.setValue(kSoundNotificationsKey, enabled);
+    emit soundNotificationsEnabledChanged(enabled);
+}
+
+QString AppSettings::uiLanguage() const
+{
+    QSettings settings;
+    return settings.value(kUiLanguageKey, QStringLiteral("fr")).toString();
+}
+
+void AppSettings::setUiLanguage(const QString &language)
+{
+    QSettings settings;
+    settings.setValue(kUiLanguageKey, language);
+    emit uiLanguageChanged(language);
 }
 
 bool AppSettings::monochromeDisplay() const

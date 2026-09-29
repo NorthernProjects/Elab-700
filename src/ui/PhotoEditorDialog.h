@@ -14,7 +14,7 @@ class PhotoCanvas : public QWidget {
     Q_OBJECT
 
 public:
-    enum class Tool { Pen, Text, Crop };
+    enum class Tool { Pen, Text, Arrow, Circle, Crop };
 
     explicit PhotoCanvas(QWidget *parent = nullptr);
 
@@ -43,6 +43,7 @@ protected:
 private:
     QRect imageDisplayRect() const;
     QPoint widgetToImage(const QPoint &widgetPoint) const;
+    QPoint imageToWidget(const QPoint &imagePoint) const;
     void pushUndoSnapshot();
 
     QImage m_image;
@@ -52,6 +53,14 @@ private:
 
     QPoint m_lastImagePoint;
     bool m_stroking = false;
+
+    // Shared by Arrow and Circle: both are drag-from-a-to-b shapes, drawn
+    // live as a widget-space preview while dragging (see paintEvent) and
+    // baked into m_image only on release — same deferred-commit approach
+    // the crop rectangle already uses below.
+    QPoint m_shapeStartImagePoint;
+    QPoint m_shapeCurrentImagePoint;
+    bool m_shapeDragging = false;
 
     QPoint m_cropStartImagePoint;
     QRect m_cropRect;

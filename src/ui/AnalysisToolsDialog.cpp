@@ -107,12 +107,12 @@ QString AnalysisCanvas::measureText(const QPoint &a, const QPoint &b) const
 {
     const double pixels = QLineF(a, b).length();
     if (m_micronsPer100Px <= 0.0)
-        return QStringLiteral("%1 px").arg(pixels, 0, 'f', 0);
+        return tr("%1 px").arg(pixels, 0, 'f', 0);
 
     const double microns = pixels * m_micronsPer100Px / 100.0;
     if (microns >= 1000.0)
-        return QStringLiteral("%1 mm").arg(microns / 1000.0, 0, 'f', 2);
-    return QStringLiteral("%1 µm").arg(microns, 0, 'f', 1);
+        return tr("%1 mm").arg(microns / 1000.0, 0, 'f', 2);
+    return tr("%1 µm").arg(microns, 0, 'f', 1);
 }
 
 // Shared by the on-screen paint (scale = display/native ratio) and the
@@ -216,7 +216,7 @@ void AnalysisCanvas::paintEvent(QPaintEvent * /*event*/)
         font.setPointSize(13);
         painter.setFont(font);
         painter.drawText(rect(), Qt::AlignCenter,
-                          QStringLiteral("Aucune image.\nConnectez la caméra ou ouvrez une image."));
+                          tr("Aucune image.\nConnectez la caméra ou ouvrez une image."));
         return;
     }
 
@@ -298,21 +298,21 @@ QImage AnalysisCanvas::renderAnnotated() const
 AnalysisToolsDialog::AnalysisToolsDialog(AppSettings *settings, const QImage &snapshot, QWidget *parent)
     : QDialog(parent), m_settings(settings)
 {
-    setWindowTitle(QStringLiteral("Analyse — comptage et mesures"));
+    setWindowTitle(tr("Analyse — comptage et mesures"));
     resize(900, 700);
 
     auto *root = new QVBoxLayout(this);
 
     auto *instruction = new QLabel(
-        QStringLiteral("Mode Compter : un clic pose un marqueur numéroté. Mode Mesurer : cliquez-glissez entre "
-                        "deux points pour afficher la distance (selon l'étalonnage de l'échelle)."),
+        tr("Mode Compter : un clic pose un marqueur numéroté. Mode Mesurer : cliquez-glissez entre "
+           "deux points pour afficher la distance (selon l'étalonnage de l'échelle)."),
         this);
     instruction->setWordWrap(true);
     root->addWidget(instruction);
 
     auto *toolsRow = new QHBoxLayout();
-    m_countModeButton = new QPushButton(QStringLiteral("Compter"), this);
-    m_measureModeButton = new QPushButton(QStringLiteral("Mesurer"), this);
+    m_countModeButton = new QPushButton(tr("Compter"), this);
+    m_measureModeButton = new QPushButton(tr("Mesurer"), this);
     m_countModeButton->setCheckable(true);
     m_measureModeButton->setCheckable(true);
     m_countModeButton->setChecked(true);
@@ -321,14 +321,14 @@ AnalysisToolsDialog::AnalysisToolsDialog(AppSettings *settings, const QImage &sn
     modeGroup->addButton(m_countModeButton);
     modeGroup->addButton(m_measureModeButton);
 
-    auto *gridCheck = new QCheckBox(QStringLiteral("Quadrillage"), this);
+    auto *gridCheck = new QCheckBox(tr("Quadrillage"), this);
     m_gridCellSpin = new QSpinBox(this);
     m_gridCellSpin->setRange(20, 500);
     m_gridCellSpin->setValue(100);
     m_gridCellSpin->setSuffix(QStringLiteral(" px"));
-    m_gridCellSpin->setToolTip(QStringLiteral("Taille d'une case du quadrillage, en pixels de l'image"));
+    m_gridCellSpin->setToolTip(tr("Taille d'une case du quadrillage, en pixels de l'image"));
 
-    m_countLabel = new QLabel(QStringLiteral("Marqueurs : 0"), this);
+    m_countLabel = new QLabel(tr("Marqueurs : 0"), this);
 
     toolsRow->addWidget(m_countModeButton);
     toolsRow->addWidget(m_measureModeButton);
@@ -345,17 +345,17 @@ AnalysisToolsDialog::AnalysisToolsDialog(AppSettings *settings, const QImage &sn
     root->addWidget(m_canvas, 1);
 
     auto *scaleInfo = new QLabel(
-        QStringLiteral("Échelle actuelle : %1 µm pour 100 px — étalonnable dans Réglages avancés.")
+        tr("Échelle actuelle : %1 µm pour 100 px — étalonnable dans Réglages avancés.")
             .arg(m_settings->scaleBarMicronsPer100Px(), 0, 'f', 1),
         this);
     root->addWidget(scaleInfo);
 
     auto *buttonRow = new QHBoxLayout();
-    auto *openButton = new QPushButton(QStringLiteral("Ouvrir une image..."), this);
-    auto *undoButton = new QPushButton(QStringLiteral("Annuler le dernier"), this);
-    auto *clearButton = new QPushButton(QStringLiteral("Tout effacer"), this);
-    auto *saveButton = new QPushButton(QStringLiteral("Enregistrer l'image annotée..."), this);
-    auto *closeButton = new QPushButton(QStringLiteral("Fermer"), this);
+    auto *openButton = new QPushButton(tr("Ouvrir une image..."), this);
+    auto *undoButton = new QPushButton(tr("Annuler le dernier"), this);
+    auto *clearButton = new QPushButton(tr("Tout effacer"), this);
+    auto *saveButton = new QPushButton(tr("Enregistrer l'image annotée..."), this);
+    auto *closeButton = new QPushButton(tr("Fermer"), this);
     buttonRow->addWidget(openButton);
     buttonRow->addWidget(undoButton);
     buttonRow->addWidget(clearButton);
@@ -385,16 +385,16 @@ AnalysisToolsDialog::AnalysisToolsDialog(AppSettings *settings, const QImage &sn
 
 void AnalysisToolsDialog::onOpenImage()
 {
-    const QString path = QFileDialog::getOpenFileName(this, QStringLiteral("Ouvrir une image"),
+    const QString path = QFileDialog::getOpenFileName(this, tr("Ouvrir une image"),
         m_settings->activeCaptureFolder(),
-        QStringLiteral("Images (*.png *.jpg *.jpeg *.tif *.tiff *.bmp)"));
+        tr("Images (*.png *.jpg *.jpeg *.tif *.tiff *.bmp)"));
     if (path.isEmpty())
         return;
 
     const QImage image(path);
     if (image.isNull()) {
-        QMessageBox::warning(this, QStringLiteral("Analyse"),
-                              QStringLiteral("Impossible d'ouvrir cette image."));
+        QMessageBox::warning(this, tr("Analyse"),
+                              tr("Impossible d'ouvrir cette image."));
         return;
     }
     m_canvas->setImage(image);
@@ -403,29 +403,29 @@ void AnalysisToolsDialog::onOpenImage()
 void AnalysisToolsDialog::onSaveAnnotated()
 {
     if (!m_canvas->hasImage()) {
-        QMessageBox::information(this, QStringLiteral("Analyse"),
-                                  QStringLiteral("Aucune image à enregistrer."));
+        QMessageBox::information(this, tr("Analyse"),
+                                  tr("Aucune image à enregistrer."));
         return;
     }
 
     const QString defaultName = QStringLiteral("analyse_%1.png")
         .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_HHmmss")));
-    const QString path = QFileDialog::getSaveFileName(this, QStringLiteral("Enregistrer l'image annotée"),
+    const QString path = QFileDialog::getSaveFileName(this, tr("Enregistrer l'image annotée"),
         QDir(m_settings->activeCaptureFolder()).filePath(defaultName),
-        QStringLiteral("Image PNG (*.png)"));
+        tr("Image PNG (*.png)"));
     if (path.isEmpty())
         return;
 
     if (!m_canvas->renderAnnotated().save(path)) {
-        QMessageBox::warning(this, QStringLiteral("Analyse"),
-                              QStringLiteral("Échec de l'enregistrement de l'image annotée."));
+        QMessageBox::warning(this, tr("Analyse"),
+                              tr("Échec de l'enregistrement de l'image annotée."));
         return;
     }
-    QMessageBox::information(this, QStringLiteral("Analyse"),
-                              QStringLiteral("Image annotée enregistrée."));
+    QMessageBox::information(this, tr("Analyse"),
+                              tr("Image annotée enregistrée."));
 }
 
 void AnalysisToolsDialog::onAnnotationsChanged()
 {
-    m_countLabel->setText(QStringLiteral("Marqueurs : %1").arg(m_canvas->markerCount()));
+    m_countLabel->setText(tr("Marqueurs : %1").arg(m_canvas->markerCount()));
 }

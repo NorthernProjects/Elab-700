@@ -23,13 +23,23 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     // A QPushButton (not QLabel) — clicking it opens a menu listing every
     // detected camera (connected or not) so a teacher can force-connect to
     // a specific one if auto-detection picked the wrong device or none.
-    m_connectionButton = new QPushButton(QStringLiteral("● Caméra non connectée"));
+    m_connectionButton = new QPushButton(tr("● Caméra non connectée"));
     m_connectionButton->setObjectName("connectionLabel");
     m_connectionButton->setFlat(true);
     m_connectionButton->setCursor(Qt::PointingHandCursor);
-    m_connectionButton->setToolTip(QStringLiteral("Voir/choisir la caméra"));
+    m_connectionButton->setToolTip(tr("Voir/choisir la caméra"));
 
-    m_fpsLabel = new QLabel(QStringLiteral("-- ips"));
+    // Separate from m_connectionButton's device picker: a plain on/off
+    // switch so a teacher can stop powering the camera between uses without
+    // wading into the device menu each time (V-next requirement).
+    m_powerButton = new QPushButton(QStringLiteral("⏻"));
+    m_powerButton->setObjectName("powerButton");
+    m_powerButton->setFixedSize(28, 28);
+    m_powerButton->setCursor(Qt::PointingHandCursor);
+    m_powerButton->setToolTip(tr("Éteindre la caméra"));
+    m_powerButton->setProperty("poweredOn", QVariant(true));
+
+    m_fpsLabel = new QLabel(tr("-- ips"));
     m_fpsLabel->setObjectName("fpsLabel");
 
     // A QPushButton (not QLabel), like #microscopeLabel — clicking it opens
@@ -39,7 +49,7 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     m_resolutionButton->setObjectName("resolutionLabel");
     m_resolutionButton->setFlat(true);
     m_resolutionButton->setCursor(Qt::PointingHandCursor);
-    m_resolutionButton->setToolTip(QStringLiteral("Choisir la résolution de la caméra"));
+    m_resolutionButton->setToolTip(tr("Choisir la résolution de la caméra"));
 
     // A QPushButton (not QLabel) so the title is clickable to show the
     // microscope/camera specs panel; #microscopeLabel QSS strips the
@@ -49,13 +59,13 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     m_microscopeLabel = new QPushButton(QStringLiteral("E-Lab 700"), this);
     m_microscopeLabel->setObjectName("microscopeLabel");
     m_microscopeLabel->setCursor(Qt::PointingHandCursor);
-    m_microscopeLabel->setToolTip(QStringLiteral("Voir les caractéristiques du microscope"));
+    m_microscopeLabel->setToolTip(tr("Voir les caractéristiques du microscope"));
     m_microscopeLabel->setFlat(true);
 
-    m_groupButton = new QPushButton(QStringLiteral("Se connecter"), this);
+    m_groupButton = new QPushButton(tr("Se connecter"), this);
     m_groupButton->setObjectName("groupButton");
     m_groupButton->setCursor(Qt::PointingHandCursor);
-    m_groupButton->setToolTip(QStringLiteral("Choisir ta classe et ton groupe"));
+    m_groupButton->setToolTip(tr("Choisir ta classe et ton groupe"));
     // Only meaningful when the classes/groups feature is on — MainWindow
     // drives visibility via setGroupButtonVisible() from the feature flags.
     m_groupButton->setVisible(false);
@@ -63,13 +73,13 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     m_teacherButton = new QPushButton(QStringLiteral("⚙"));
     m_teacherButton->setObjectName("teacherButton");
     m_teacherButton->setFixedSize(36, 36);
-    m_teacherButton->setToolTip(QStringLiteral("Réglages"));
+    m_teacherButton->setToolTip(tr("Réglages"));
     m_teacherButton->setCursor(Qt::PointingHandCursor);
 
     m_helpButton = new QPushButton(QStringLiteral("?"));
     m_helpButton->setObjectName("teacherButton");
     m_helpButton->setFixedSize(36, 36);
-    m_helpButton->setToolTip(QStringLiteral("Aide"));
+    m_helpButton->setToolTip(tr("Aide"));
     m_helpButton->setCursor(Qt::PointingHandCursor);
 
     // Left/center/right built as separate containers placed in a 3-column
@@ -84,6 +94,8 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     leftLayout->addWidget(m_logoLabel);
     leftLayout->addSpacing(16);
     leftLayout->addWidget(m_connectionButton);
+    leftLayout->addSpacing(6);
+    leftLayout->addWidget(m_powerButton);
     leftLayout->addSpacing(24);
     leftLayout->addWidget(m_resolutionButton);
     leftLayout->addSpacing(24);
@@ -112,19 +124,20 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     connect(m_resolutionButton, &QPushButton::clicked, this, &TopStatusBar::resolutionClicked);
     connect(m_connectionButton, &QPushButton::clicked, this, &TopStatusBar::connectionClicked);
     connect(m_helpButton, &QPushButton::clicked, this, &TopStatusBar::helpRequested);
+    connect(m_powerButton, &QPushButton::clicked, this, &TopStatusBar::powerToggleRequested);
 }
 
 void TopStatusBar::setConnected(bool connected, const QString &modelName)
 {
     if (connected) {
         m_connectionButton->setText(modelName.isEmpty()
-            ? QStringLiteral("● Caméra connectée")
-            : QStringLiteral("● Caméra connectée (%1)").arg(modelName));
+            ? tr("● Caméra connectée")
+            : tr("● Caméra connectée (%1)").arg(modelName));
         m_connectionButton->setProperty("connected", QVariant(true));
     } else {
-        m_connectionButton->setText(QStringLiteral("● Caméra non connectée"));
+        m_connectionButton->setText(tr("● Caméra non connectée"));
         m_connectionButton->setProperty("connected", QVariant(false));
-        m_fpsLabel->setText(QStringLiteral("-- ips"));
+        m_fpsLabel->setText(tr("-- ips"));
         m_resolutionButton->setText(QStringLiteral("--x--"));
     }
     m_connectionButton->style()->unpolish(m_connectionButton);
@@ -133,7 +146,7 @@ void TopStatusBar::setConnected(bool connected, const QString &modelName)
 
 void TopStatusBar::setFps(double fps)
 {
-    m_fpsLabel->setText(QStringLiteral("%1 ips").arg(fps, 0, 'f', 1));
+    m_fpsLabel->setText(tr("%1 ips").arg(fps, 0, 'f', 1));
 }
 
 void TopStatusBar::setResolution(const QSize &size)
@@ -143,6 +156,15 @@ void TopStatusBar::setResolution(const QSize &size)
     } else {
         m_resolutionButton->setText(QStringLiteral("%1x%2").arg(size.width()).arg(size.height()));
     }
+}
+
+void TopStatusBar::setCameraPoweredIndicator(bool on)
+{
+    m_powerButton->setText(on ? QStringLiteral("⏻") : QStringLiteral("⭘"));
+    m_powerButton->setToolTip(on ? tr("Éteindre la caméra") : tr("Allumer la caméra"));
+    m_powerButton->setProperty("poweredOn", QVariant(on));
+    m_powerButton->style()->unpolish(m_powerButton);
+    m_powerButton->style()->polish(m_powerButton);
 }
 
 void TopStatusBar::setGroupButtonVisible(bool visible)
@@ -187,8 +209,8 @@ void TopStatusBar::setLeftInset(int pixels)
 void TopStatusBar::setGroupInfo(const QString &className, const QString &groupName)
 {
     if (className.isEmpty() && groupName.isEmpty()) {
-        m_groupButton->setText(QStringLiteral("Se connecter"));
+        m_groupButton->setText(tr("Se connecter"));
         return;
     }
-    m_groupButton->setText(QStringLiteral("%1 — %2").arg(className, groupName));
+    m_groupButton->setText(tr("%1 — %2").arg(className, groupName));
 }

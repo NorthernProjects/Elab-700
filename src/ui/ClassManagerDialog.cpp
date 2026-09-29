@@ -18,7 +18,7 @@ constexpr int kMaxGroupsPerClass = 6;
 ClassManagerDialog::ClassManagerDialog(AppSettings *settings, QWidget *parent)
     : QDialog(parent), m_settings(settings), m_classes(settings->classes())
 {
-    setWindowTitle(QStringLiteral("Classes et groupes"));
+    setWindowTitle(tr("Classes et groupes"));
     resize(560, 420);
 
     auto *root = new QVBoxLayout(this);
@@ -31,8 +31,8 @@ ClassManagerDialog::ClassManagerDialog(AppSettings *settings, QWidget *parent)
     classColumn->addWidget(m_classList, 1);
 
     auto *classButtonsRow = new QHBoxLayout();
-    auto *addClassButton = new QPushButton(QStringLiteral("+ Classe"), this);
-    auto *removeClassButton = new QPushButton(QStringLiteral("- Classe"), this);
+    auto *addClassButton = new QPushButton(tr("+ Classe"), this);
+    auto *removeClassButton = new QPushButton(tr("- Classe"), this);
     classButtonsRow->addWidget(addClassButton);
     classButtonsRow->addWidget(removeClassButton);
     classColumn->addLayout(classButtonsRow);
@@ -43,24 +43,24 @@ ClassManagerDialog::ClassManagerDialog(AppSettings *settings, QWidget *parent)
     auto *form = new QFormLayout();
     m_nameEdit = new QLineEdit(this);
     m_teacherNameEdit = new QLineEdit(this);
-    m_teacherNameEdit->setPlaceholderText(QStringLiteral("Prénom Nom"));
+    m_teacherNameEdit->setPlaceholderText(tr("Prénom Nom"));
     m_emailEdit = new QLineEdit(this);
     m_emailEdit->setPlaceholderText(QStringLiteral("courriel.enseignant@ecole.qc.ca"));
     m_passwordEdit = new QLineEdit(this);
-    m_passwordEdit->setPlaceholderText(QStringLiteral("mot de passe partagé de la classe"));
-    form->addRow(QStringLiteral("Nom de la classe"), m_nameEdit);
-    form->addRow(QStringLiteral("Nom de l'enseignant"), m_teacherNameEdit);
-    form->addRow(QStringLiteral("Courriel de l'enseignant"), m_emailEdit);
-    form->addRow(QStringLiteral("Mot de passe de la classe"), m_passwordEdit);
+    m_passwordEdit->setPlaceholderText(tr("mot de passe partagé de la classe"));
+    form->addRow(tr("Nom de la classe"), m_nameEdit);
+    form->addRow(tr("Nom de l'enseignant"), m_teacherNameEdit);
+    form->addRow(tr("Courriel de l'enseignant"), m_emailEdit);
+    form->addRow(tr("Mot de passe de la classe"), m_passwordEdit);
     detailColumn->addLayout(form);
 
-    auto *groupGroup = new QGroupBox(QStringLiteral("Groupes (6 maximum)"), this);
+    auto *groupGroup = new QGroupBox(tr("Groupes (6 maximum)"), this);
     auto *groupLayout = new QVBoxLayout(groupGroup);
     m_groupList = new QListWidget(groupGroup);
     groupLayout->addWidget(m_groupList, 1);
     auto *groupButtonsRow = new QHBoxLayout();
-    auto *addGroupButton = new QPushButton(QStringLiteral("+ Groupe"), groupGroup);
-    auto *removeGroupButton = new QPushButton(QStringLiteral("- Groupe"), groupGroup);
+    auto *addGroupButton = new QPushButton(tr("+ Groupe"), groupGroup);
+    auto *removeGroupButton = new QPushButton(tr("- Groupe"), groupGroup);
     groupButtonsRow->addWidget(addGroupButton);
     groupButtonsRow->addWidget(removeGroupButton);
     groupLayout->addLayout(groupButtonsRow);
@@ -146,7 +146,7 @@ void ClassManagerDialog::onAddClass()
     storeEditorIntoClass(m_currentIndex);
 
     SchoolClass newClass;
-    newClass.name = QStringLiteral("Nouvelle classe");
+    newClass.name = tr("Nouvelle classe");
     m_classes.append(newClass);
     m_classList->addItem(newClass.name);
     m_classList->setCurrentRow(m_classList->count() - 1);
@@ -157,8 +157,8 @@ void ClassManagerDialog::onRemoveClass()
     if (m_currentIndex < 0 || m_currentIndex >= m_classes.size())
         return;
 
-    const auto answer = QMessageBox::question(this, QStringLiteral("Supprimer"),
-        QStringLiteral("Supprimer la classe « %1 » ?").arg(m_classes.at(m_currentIndex).name));
+    const auto answer = QMessageBox::question(this, tr("Supprimer"),
+        tr("Supprimer la classe « %1 » ?").arg(m_classes.at(m_currentIndex).name));
     if (answer != QMessageBox::Yes)
         return;
 
@@ -173,15 +173,15 @@ void ClassManagerDialog::onAddGroup()
     if (m_currentIndex < 0)
         return;
     if (m_groupList->count() >= kMaxGroupsPerClass) {
-        QMessageBox::information(this, QStringLiteral("Groupes"),
-            QStringLiteral("Maximum %1 groupes par classe.").arg(kMaxGroupsPerClass));
+        QMessageBox::information(this, tr("Groupes"),
+            tr("Maximum %1 groupes par classe.").arg(kMaxGroupsPerClass));
         return;
     }
 
     bool ok = false;
-    const QString name = QInputDialog::getText(this, QStringLiteral("Nouveau groupe"),
-                                                QStringLiteral("Nom du groupe :"), QLineEdit::Normal,
-                                                QStringLiteral("Groupe %1").arg(m_groupList->count() + 1), &ok);
+    const QString name = QInputDialog::getText(this, tr("Nouveau groupe"),
+                                                tr("Nom du groupe :"), QLineEdit::Normal,
+                                                tr("Groupe %1").arg(m_groupList->count() + 1), &ok);
     if (!ok || name.trimmed().isEmpty())
         return;
 

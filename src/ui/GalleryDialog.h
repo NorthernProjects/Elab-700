@@ -24,6 +24,7 @@ private slots:
     void onEditSelected();
     void onCompareRequested();
     void onExportPdfRequested();
+    void onJournalRequested();
     void onTrashRequested();
     void onExportFolderRequested();
     void onSelectionChanged();

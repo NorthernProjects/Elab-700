@@ -58,6 +58,26 @@ public:
     bool showFocusIndicator() const;
     void setShowFocusIndicator(bool enabled);
 
+    // Ceiling (0-100, normalized like CameraBackend::brightness()) the
+    // student-facing brightness slider is capped at — set by the teacher so
+    // a class can't wash the image out fiddling with it unsupervised.
+    int maxBrightnessPercent() const;
+    void setMaxBrightnessPercent(int percent);
+
+    // A short beep (QApplication::beep(), no audio files needed) when a
+    // video recording stops or the lab timer runs out — off by default so
+    // a quiet classroom stays quiet unless the teacher opts in.
+    bool soundNotificationsEnabled() const;
+    void setSoundNotificationsEnabled(bool enabled);
+
+    // "fr" (default) or "en" — see translations/elab700_en.ts. Applied at
+    // startup (main.cpp installs the matching QTranslator before any UI is
+    // constructed); changing it takes effect after a restart, since widgets
+    // in this codebase set their text once at construction rather than
+    // through Qt's dynamic retranslateUi() mechanism.
+    QString uiLanguage() const;
+    void setUiLanguage(const QString &language);
+
     // Time-lapse: silently takes a photo on a fixed interval while enabled
     // and a camera is connected (no rename prompt — that's only for manual
     // captures, would be far too disruptive here).
@@ -155,6 +175,9 @@ signals:
     void activeCaptureFolderChanged(const QString &path);
     void showGridChanged(bool enabled);
     void showFocusIndicatorChanged(bool enabled);
+    void maxBrightnessPercentChanged(int percent);
+    void soundNotificationsEnabledChanged(bool enabled);
+    void uiLanguageChanged(const QString &language);
     void timeLapseEnabledChanged(bool enabled);
     void timeLapseIntervalSecondsChanged(int seconds);
     void showScaleBarChanged(bool enabled);

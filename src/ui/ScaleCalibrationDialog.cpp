@@ -116,14 +116,14 @@ void CalibrationImageWidget::mousePressEvent(QMouseEvent *event)
 ScaleCalibrationDialog::ScaleCalibrationDialog(const QImage &snapshot, AppSettings *settings, QWidget *parent)
     : QDialog(parent), m_settings(settings)
 {
-    setWindowTitle(QStringLiteral("Étalonner l'échelle de mesure"));
+    setWindowTitle(tr("Étalonner l'échelle de mesure"));
     resize(820, 640);
 
     auto *root = new QVBoxLayout(this);
 
     m_instructionLabel = new QLabel(
-        QStringLiteral("Placez un objet de taille connue sous le microscope (une règle, une lame micrométrique...), "
-                        "puis cliquez sur deux points dont vous connaissez la distance réelle."),
+        tr("Placez un objet de taille connue sous le microscope (une règle, une lame micrométrique...), "
+           "puis cliquez sur deux points dont vous connaissez la distance réelle."),
         this);
     m_instructionLabel->setWordWrap(true);
     root->addWidget(m_instructionLabel);
@@ -133,14 +133,14 @@ ScaleCalibrationDialog::ScaleCalibrationDialog(const QImage &snapshot, AppSettin
     root->addWidget(m_canvas, 1);
 
     auto *distanceRow = new QHBoxLayout();
-    auto *distanceLabel = new QLabel(QStringLiteral("Distance réelle entre les deux points :"), this);
+    auto *distanceLabel = new QLabel(tr("Distance réelle entre les deux points :"), this);
     m_realDistanceSpin = new QDoubleSpinBox(this);
     m_realDistanceSpin->setRange(0.001, 1000000.0);
     m_realDistanceSpin->setDecimals(3);
     m_realDistanceSpin->setValue(1.0);
     m_unitCombo = new QComboBox(this);
-    m_unitCombo->addItem(QStringLiteral("mm"), 1000.0);
-    m_unitCombo->addItem(QStringLiteral("µm"), 1.0);
+    m_unitCombo->addItem(tr("mm"), 1000.0);
+    m_unitCombo->addItem(tr("µm"), 1.0);
     distanceRow->addWidget(distanceLabel);
     distanceRow->addWidget(m_realDistanceSpin);
     distanceRow->addWidget(m_unitCombo);
@@ -148,9 +148,9 @@ ScaleCalibrationDialog::ScaleCalibrationDialog(const QImage &snapshot, AppSettin
     root->addLayout(distanceRow);
 
     auto *buttonRow = new QHBoxLayout();
-    auto *resetButton = new QPushButton(QStringLiteral("Recommencer"), this);
-    auto *cancelButton = new QPushButton(QStringLiteral("Annuler"), this);
-    m_confirmButton = new QPushButton(QStringLiteral("Confirmer l'étalonnage"), this);
+    auto *resetButton = new QPushButton(tr("Recommencer"), this);
+    auto *cancelButton = new QPushButton(tr("Annuler"), this);
+    m_confirmButton = new QPushButton(tr("Confirmer l'étalonnage"), this);
     m_confirmButton->setEnabled(false);
     buttonRow->addWidget(resetButton);
     buttonRow->addStretch();
@@ -178,8 +178,8 @@ void ScaleCalibrationDialog::onConfirm()
 {
     const double pixelDist = m_canvas->pixelDistance();
     if (pixelDist <= 0.0) {
-        QMessageBox::warning(this, QStringLiteral("Étalonnage"),
-                              QStringLiteral("Cliquez sur deux points distincts avant de confirmer."));
+        QMessageBox::warning(this, tr("Étalonnage"),
+                              tr("Cliquez sur deux points distincts avant de confirmer."));
         return;
     }
 
@@ -190,8 +190,8 @@ void ScaleCalibrationDialog::onConfirm()
     m_settings->setScaleBarMicronsPer100Px(micronsPer100Px);
     m_settings->setShowScaleBar(true);
 
-    QMessageBox::information(this, QStringLiteral("Étalonnage"),
-                              QStringLiteral("Échelle mise à jour : %1 µm pour 100 px.")
+    QMessageBox::information(this, tr("Étalonnage"),
+                              tr("Échelle mise à jour : %1 µm pour 100 px.")
                                   .arg(micronsPer100Px, 0, 'f', 1));
     accept();
 }

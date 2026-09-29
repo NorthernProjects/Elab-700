@@ -34,11 +34,11 @@ UvcCameraBackend::~UvcCameraBackend()
 QString UvcCameraBackend::backendName() const
 {
 #if defined(Q_OS_WIN)
-    return QStringLiteral("Caméra USB (DirectShow)");
+    return tr("Caméra USB (DirectShow)");
 #elif defined(Q_OS_MAC)
-    return QStringLiteral("Caméra USB (AVFoundation)");
+    return tr("Caméra USB (AVFoundation)");
 #else
-    return QStringLiteral("Caméra USB");
+    return tr("Caméra USB");
 #endif
 }
 
@@ -81,7 +81,7 @@ QVector<CameraDeviceInfo> UvcCameraBackend::probeDevices()
         CameraDeviceInfo info;
         info.id = QString::number(i);
         info.resolution = QSize(frame.cols, frame.rows);
-        info.displayName = QStringLiteral("Caméra USB (%1x%2)").arg(frame.cols).arg(frame.rows);
+        info.displayName = tr("Caméra USB (%1x%2)").arg(frame.cols).arg(frame.rows);
         devices.append(info);
     }
 
@@ -124,7 +124,7 @@ bool UvcCameraBackend::open(const QString &deviceId)
 
     CameraDeviceInfo info;
     info.id = deviceId;
-    info.displayName = QStringLiteral("Caméra USB");
+    info.displayName = tr("Caméra USB");
     emit deviceConnected(info);
     return true;
 }
@@ -159,7 +159,7 @@ void UvcCameraBackend::captureFrame()
         constexpr qint64 kStreamLostThresholdMs = 2500;
         if (m_lastGoodFrameClock.isValid() && m_lastGoodFrameClock.elapsed() < kStreamLostThresholdMs)
             return;
-        emit errorOccurred(QStringLiteral("Perte du flux caméra."));
+        emit errorOccurred(tr("Perte du flux caméra."));
         close();
         return;
     }

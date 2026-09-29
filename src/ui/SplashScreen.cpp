@@ -101,7 +101,7 @@ SplashScreen::SplashScreen(QWidget *parent) : QWidget(parent)
     m_titleLabel->setStyleSheet(QStringLiteral("color: #5ce1e6;"));
     containerLayout->addWidget(m_titleLabel);
 
-    m_subtitleLabel = new QLabel(QStringLiteral("MICROSCOPIE"), m_container);
+    m_subtitleLabel = new QLabel(tr("MICROSCOPIE"), m_container);
     m_subtitleLabel->setAlignment(Qt::AlignCenter);
     QFont subtitleFont = m_subtitleLabel->font();
     subtitleFont.setPointSize(13);

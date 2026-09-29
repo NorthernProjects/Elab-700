@@ -18,19 +18,19 @@ constexpr int kGroupRole = Qt::UserRole + 2;
 TeacherOverviewDialog::TeacherOverviewDialog(AppSettings *settings, QWidget *parent)
     : QDialog(parent), m_settings(settings)
 {
-    setWindowTitle(QStringLiteral("Vue d'ensemble des groupes"));
+    setWindowTitle(tr("Vue d'ensemble des groupes"));
     resize(560, 520);
 
     m_tree = new QTreeWidget(this);
     m_tree->setColumnCount(2);
-    m_tree->setHeaderLabels({QStringLiteral("Classe / Groupe"), QStringLiteral("Captures")});
+    m_tree->setHeaderLabels({tr("Classe / Groupe"), tr("Captures")});
     m_tree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
     auto *infoLabel = new QLabel(
-        QStringLiteral("Double-clique sur un groupe pour ouvrir sa galerie."), this);
+        tr("Double-clique sur un groupe pour ouvrir sa galerie."), this);
 
-    auto *openButton = new QPushButton(QStringLiteral("Ouvrir la galerie"), this);
-    auto *closeButton = new QPushButton(QStringLiteral("Fermer"), this);
+    auto *openButton = new QPushButton(tr("Ouvrir la galerie"), this);
+    auto *closeButton = new QPushButton(tr("Fermer"), this);
     openButton->setEnabled(false);
 
     auto *buttonRow = new QHBoxLayout();
@@ -78,7 +78,7 @@ void TeacherOverviewDialog::reloadCounts()
                     ++photoCount;
             }
 
-            const QString countText = QStringLiteral("%1 photo(s), %2 vidéo(s)").arg(photoCount).arg(videoCount);
+            const QString countText = tr("%1 photo(s), %2 vidéo(s)").arg(photoCount).arg(videoCount);
             auto *groupItem = new QTreeWidgetItem(classItem, {groupName, countText});
             groupItem->setData(0, kClassRole, schoolClass.name);
             groupItem->setData(0, kGroupRole, groupName);

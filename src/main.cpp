@@ -3,6 +3,7 @@
 #include <QIcon>
 #include <QSettings>
 #include <QTextStream>
+#include <QTranslator>
 
 #include "core/AppSettings.h"
 #include "ui/MainWindow.h"
@@ -56,6 +57,16 @@ int main(int argc, char *argv[])
     // wrappers with no meaningful separate state, so this is harmless.
     AppSettings initialSettingsPeek;
     app.setStyleSheet(loadThemeStylesheet(initialSettingsPeek.lightTheme()));
+
+    // Must be installed before any tr() call runs (i.e. before any widget is
+    // constructed below) — see AppSettings::uiLanguage(). Absent in the
+    // legacy Qt5/Windows 7 build (no :/i18n resource there), where load()
+    // just fails harmlessly and the app stays French.
+    QTranslator translator;
+    if (initialSettingsPeek.uiLanguage() == QLatin1String("en")
+        && translator.load(QStringLiteral(":/i18n/elab700_en.qm"))) {
+        app.installTranslator(&translator);
+    }
 
     // First launch: pick the edition (Scolaire / Grand public / Laboratoire)
     // BEFORE the splash exists — the always-on-top splash would hide a modal

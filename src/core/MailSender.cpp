@@ -4,6 +4,7 @@
 
 #include <mapi.h>
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
 
@@ -22,7 +23,8 @@ bool sendWithAttachment(const QString &toName, const QString &toAddress, const Q
     HMODULE mapiModule = LoadLibraryW(L"mapi32.dll");
     if (!mapiModule) {
         if (errorMessage)
-            *errorMessage = QStringLiteral("mapi32.dll introuvable : aucun client de messagerie MAPI n'est installé.");
+            *errorMessage = QCoreApplication::translate("MailSender",
+                "mapi32.dll introuvable : aucun client de messagerie MAPI n'est installé.");
         return false;
     }
 
@@ -30,7 +32,7 @@ bool sendWithAttachment(const QString &toName, const QString &toAddress, const Q
     if (!mapiSendMail) {
         FreeLibrary(mapiModule);
         if (errorMessage)
-            *errorMessage = QStringLiteral("Fonction MAPISendMail introuvable dans mapi32.dll.");
+            *errorMessage = QCoreApplication::translate("MailSender", "Fonction MAPISendMail introuvable dans mapi32.dll.");
         return false;
     }
 
@@ -71,7 +73,7 @@ bool sendWithAttachment(const QString &toName, const QString &toAddress, const Q
 
     if (result != SUCCESS_SUCCESS && result != MAPI_USER_ABORT) {
         if (errorMessage) {
-            *errorMessage = QStringLiteral(
+            *errorMessage = QCoreApplication::translate("MailSender",
                 "Aucun client de messagerie MAPI n'a pu être ouvert (code %1). "
                 "Vérifiez qu'un client de messagerie (Outlook, etc.) est installé et configuré par défaut.")
                 .arg(result);

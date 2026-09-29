@@ -176,7 +176,7 @@ MainWindow::MainWindow(QWidget *parent)
     auto applyFeatureFlags = [this]() {
         m_topBar->setGroupButtonVisible(m_settings.featureClassesEnabled());
         m_topBar->setTeacherButtonToolTip(m_settings.appMode() == QLatin1String("school")
-            ? QStringLiteral("Mode professeur") : QStringLiteral("Réglages avancés"));
+            ? tr("Mode professeur") : tr("Réglages avancés"));
         m_microscopeInfoPanel->setLearningAidsVisible(m_settings.featureLearningAidsEnabled());
     };
     applyFeatureFlags();
@@ -198,6 +198,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_settings, &AppSettings::scaleBarMicronsPer100PxChanged, m_videoView, &VideoView::setScaleBarCalibration);
     m_videoView->setScaleBarCalibration(m_settings.scaleBarMicronsPer100Px());
 
+    connect(&m_settings, &AppSettings::maxBrightnessPercentChanged, m_bottomBar, &BottomBar::setBrightnessLimit);
+    m_bottomBar->setBrightnessLimit(m_settings.maxBrightnessPercent());
+
     connect(&m_timeLapseTimer, &QTimer::timeout, this, &MainWindow::onTimeLapseTick);
     connect(&m_labCountdownTimer, &QTimer::timeout, this, &MainWindow::onLabTimerTick);
 
@@ -218,6 +221,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(&m_cameraManager, &CameraManager::connected, this, &MainWindow::onCameraConnected);
     connect(&m_cameraManager, &CameraManager::disconnected, this, &MainWindow::onCameraDisconnected);
+    connect(&m_cameraManager, &CameraManager::poweredOnChanged, m_topBar, &TopStatusBar::setCameraPoweredIndicator);
+    m_topBar->setCameraPoweredIndicator(m_cameraManager.isPoweredOn());
 
     CameraBackend *backend = m_cameraManager.backend();
     connect(backend, &CameraBackend::frameReady, this, [this](const CameraFrame &frame) {
@@ -260,25 +265,29 @@ MainWindow::MainWindow(QWidget *parent)
     m_captureManager.setMetadataProvider([this]() {
         QString extra;
         const QString name = m_settings.microscopeName();
-        extra += QStringLiteral("Microscope : %1\n").arg(name.isEmpty() ? QStringLiteral("-") : name);
+        extra += tr("Microscope : %1\n").arg(name.isEmpty() ? QStringLiteral("-") : name);
         CameraBackend *backend = m_cameraManager.backend();
         if (backend->isOpen()) {
             const QSize res = backend->currentResolution();
-            extra += QStringLiteral("Résolution capteur : %1 x %2\n").arg(res.width()).arg(res.height());
-            extra += QStringLiteral("Exposition : %1\n").arg(backend->exposure());
-            extra += QStringLiteral("Gain : %1\n").arg(backend->gain());
+            extra += tr("Résolution capteur : %1 x %2\n").arg(res.width()).arg(res.height());
+            extra += tr("Exposition : %1\n").arg(backend->exposure());
+            extra += tr("Gain : %1\n").arg(backend->gain());
         }
-        extra += QStringLiteral("Étalonnage échelle : %1 µm / 100 px\n")
+        extra += tr("Étalonnage échelle : %1 µm / 100 px\n")
                      .arg(m_settings.scaleBarMicronsPer100Px(), 0, 'f', 1);
         return extra;
     });
     connect(m_bottomBar, &BottomBar::zoomInRequested, this, &MainWindow::onZoomInRequested);
     connect(m_bottomBar, &BottomBar::zoomOutRequested, this, &MainWindow::onZoomOutRequested);
     connect(m_bottomBar, &BottomBar::zoomResetRequested, this, &MainWindow::onZoomResetRequested);
+    connect(m_bottomBar, &BottomBar::brightnessChanged, this, &MainWindow::onBrightnessChanged);
     connect(m_topBar, &TopStatusBar::teacherModeRequested, this, &MainWindow::onTeacherModeRequested);
     connect(m_topBar, &TopStatusBar::microscopeInfoRequested, this, &MainWindow::onMicroscopeInfoRequested);
     connect(m_topBar, &TopStatusBar::resolutionClicked, this, &MainWindow::onResolutionClicked);
     connect(m_topBar, &TopStatusBar::connectionClicked, this, &MainWindow::onConnectionClicked);
+    connect(m_topBar, &TopStatusBar::powerToggleRequested, this, [this]() {
+        m_cameraManager.setPoweredOn(!m_cameraManager.isPoweredOn());
+    });
     connect(m_topBar, &TopStatusBar::helpRequested, this, [this]() {
         HelpDialog dialog(this);
         dialog.exec();
@@ -290,7 +299,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(&m_captureManager, &CaptureManager::photoSaved, this, [this](const QString &path) {
         m_galleryModel.refresh();
-        statusBar()->showMessage(QStringLiteral("Photo enregistrée : %1").arg(path), 3000);
+        statusBar()->showMessage(tr("Photo enregistrée : %1").arg(path), 3000);
         // Time-lapse fires unattended on a timer — a rename prompt on every
         // shot would be far more disruptive than useful there.
         if (m_timeLapseCapturing)
@@ -300,7 +309,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
     connect(&m_captureManager, &CaptureManager::recordingStopped, this, [this](const QString &path) {
         m_galleryModel.refresh();
-        statusBar()->showMessage(QStringLiteral("Vidéo enregistrée : %1").arg(path), 3000);
+        statusBar()->showMessage(tr("Vidéo enregistrée : %1").arg(path), 3000);
     });
     connect(&m_captureManager, &CaptureManager::captureError, this, [this](const QString &message) {
         QMessageBox::warning(this, QStringLiteral("E-Lab 700"), message);
@@ -320,6 +329,8 @@ void MainWindow::onVideoToggleRequested()
     if (m_captureManager.isRecording()) {
         m_captureManager.stopRecording();
         m_bottomBar->setRecording(false);
+        if (m_settings.soundNotificationsEnabled())
+            QApplication::beep();
     } else if (m_captureManager.startRecording()) {
         m_bottomBar->setRecording(true);
     }
@@ -330,7 +341,7 @@ void MainWindow::onAutoRequested()
     CameraBackend *backend = m_cameraManager.backend();
     backend->setAutoExposure(true);
     backend->setAutoWhiteBalance(true);
-    statusBar()->showMessage(QStringLiteral("Exposition et balance des blancs réglées automatiquement"), 2000);
+    statusBar()->showMessage(tr("Exposition et balance des blancs réglées automatiquement"), 2000);
     startResolutionAutoTuning();
 }
 
@@ -352,13 +363,22 @@ void MainWindow::onZoomResetRequested()
     m_bottomBar->setZoomPercent(static_cast<int>(m_zoomFactor * 100));
 }
 
+void MainWindow::onBrightnessChanged(int percent)
+{
+    // Defense in depth: the slider's own range is already capped at
+    // maxBrightnessPercent() (see setBrightnessLimit), but clamp again here
+    // in case that setting changed after the slider was constructed.
+    const int clamped = qMin(percent, m_settings.maxBrightnessPercent());
+    m_cameraManager.backend()->setBrightness(clamped);
+}
+
 void MainWindow::onGroupSelectionRequested()
 {
     const QVector<SchoolClass> classes = m_settings.classes();
     if (classes.isEmpty()) {
-        QMessageBox::information(this, QStringLiteral("Se connecter"),
-            QStringLiteral("Aucune classe n'est configurée. Demande à ton enseignant d'ouvrir le mode "
-                           "professeur et \"Gérer les classes et groupes...\"."));
+        QMessageBox::information(this, tr("Se connecter"),
+            tr("Aucune classe n'est configurée. Demande à ton enseignant d'ouvrir le mode "
+               "professeur et \"Gérer les classes et groupes...\"."));
         return;
     }
 
@@ -421,7 +441,7 @@ void MainWindow::probeNextResolution()
             m_topBar->setResolution(chosen);
             m_microscopeInfoPanel->setResolution(chosen);
             statusBar()->showMessage(
-                QStringLiteral("Résolution optimisée automatiquement : %1 x %2 (%3 ips)")
+                tr("Résolution optimisée automatiquement : %1 x %2 (%3 ips)")
                     .arg(chosen.width()).arg(chosen.height()).arg(m_lastReportedFps, 0, 'f', 1),
                 4000);
             return;
@@ -462,14 +482,14 @@ void MainWindow::setImmersiveMode(bool immersive)
 bool MainWindow::confirmTeacherPin()
 {
     bool ok = false;
-    const QString pin = QInputDialog::getText(this, QStringLiteral("Mode professeur"),
-                                               QStringLiteral("Code PIN professeur :"),
+    const QString pin = QInputDialog::getText(this, tr("Mode professeur"),
+                                               tr("Code PIN professeur :"),
                                                QLineEdit::Password, QString(), &ok);
     if (!ok)
         return false;
 
     if (!m_settings.checkTeacherPin(pin)) {
-        QMessageBox::warning(this, QStringLiteral("Mode professeur"), QStringLiteral("Code PIN incorrect."));
+        QMessageBox::warning(this, tr("Mode professeur"), tr("Code PIN incorrect."));
         return false;
     }
     return true;
@@ -503,6 +523,12 @@ void MainWindow::onCameraConnected(const CameraDeviceInfo &info)
     m_videoView->setCameraConnected(true);
     m_microscopeInfoPanel->setConnected(true);
     m_microscopeInfoPanel->setResolution(backend->currentResolution());
+    // Reflect whatever brightness the backend actually opened with (clamped
+    // to the teacher's ceiling) rather than leaving the slider at its
+    // construction-time default of 50%.
+    const int initialBrightness = qMin(backend->brightness(), m_settings.maxBrightnessPercent());
+    backend->setBrightness(initialBrightness);
+    m_bottomBar->setBrightnessPercent(initialBrightness);
     // Sharp in the eyepieces but soft on screen usually means the captured
     // resolution is lower than what's needed to fill the display without
     // upscaling blur — pick the highest resolution the camera can sustain
@@ -555,7 +581,7 @@ void MainWindow::onResolutionClicked()
             m_topBar->setResolution(applied);
             m_microscopeInfoPanel->setResolution(applied);
             statusBar()->showMessage(
-                QStringLiteral("Résolution : %1 x %2").arg(applied.width()).arg(applied.height()), 3000);
+                tr("Résolution : %1 x %2").arg(applied.width()).arg(applied.height()), 3000);
         });
     }
     menu.exec(QCursor::pos());
@@ -583,17 +609,27 @@ void MainWindow::onConnectionClicked()
     const QVector<CameraDeviceInfo> devices = m_cameraManager.lastKnownDevices();
     QMenu menu(this);
 
+    // Mirrors the top-bar power button's own red/green state right here,
+    // so it's obvious from this menu alone why nothing is connected when
+    // the camera was deliberately turned off (rather than just a disconnect
+    // or missing driver).
+    const bool poweredOn = m_cameraManager.isPoweredOn();
+    QAction *powerNotice = menu.addAction(coloredDotIcon(poweredOn ? QColor("#35e08a") : QColor("#ff5c6c")),
+                                           poweredOn ? tr("Caméra allumée") : tr("Caméra éteinte"));
+    powerNotice->setEnabled(false);
+    menu.addSeparator();
+
     if (m_cameraManager.isConnected()) {
-        QAction *disconnectAction = menu.addAction(QStringLiteral("Déconnecter la caméra"));
+        QAction *disconnectAction = menu.addAction(tr("Déconnecter la caméra"));
         connect(disconnectAction, &QAction::triggered, this, [this]() {
             m_cameraManager.disconnectCamera();
-            statusBar()->showMessage(QStringLiteral("Caméra déconnectée."), 3000);
+            statusBar()->showMessage(tr("Caméra déconnectée."), 3000);
         });
         menu.addSeparator();
     }
 
     if (devices.isEmpty()) {
-        QAction *none = menu.addAction(QStringLiteral("Aucune caméra détectée"));
+        QAction *none = menu.addAction(tr("Aucune caméra détectée"));
         none->setEnabled(false);
     } else {
         for (const CameraDeviceInfo &device : devices) {
@@ -605,7 +641,7 @@ void MainWindow::onConnectionClicked()
             connect(action, &QAction::triggered, this, [this, device]() {
                 if (!m_cameraManager.forceConnect(device.id)) {
                     statusBar()->showMessage(
-                        QStringLiteral("Impossible de se connecter à %1.").arg(device.displayName), 4000);
+                        tr("Impossible de se connecter à %1.").arg(device.displayName), 4000);
                 }
             });
         }
@@ -636,8 +672,8 @@ void MainWindow::promptRenamePhoto(const QString &path)
 {
     const QFileInfo info(path);
     bool ok = false;
-    const QString newBaseName = QInputDialog::getText(this, QStringLiteral("Renommer la photo"),
-        QStringLiteral("Nom du fichier :"), QLineEdit::Normal, info.completeBaseName(), &ok);
+    const QString newBaseName = QInputDialog::getText(this, tr("Renommer la photo"),
+        tr("Nom du fichier :"), QLineEdit::Normal, info.completeBaseName(), &ok);
     if (!ok)
         return;
 
@@ -647,14 +683,14 @@ void MainWindow::promptRenamePhoto(const QString &path)
 
     const QString newPath = info.dir().filePath(sanitized + QLatin1Char('.') + info.suffix());
     if (QFile::exists(newPath)) {
-        QMessageBox::warning(this, QStringLiteral("Renommer"), QStringLiteral("Un fichier porte déjà ce nom."));
+        QMessageBox::warning(this, tr("Renommer"), tr("Un fichier porte déjà ce nom."));
         return;
     }
 
     if (QFile::rename(path, newPath))
         m_galleryModel.refresh();
     else
-        QMessageBox::warning(this, QStringLiteral("Renommer"), QStringLiteral("Impossible de renommer le fichier."));
+        QMessageBox::warning(this, tr("Renommer"), tr("Impossible de renommer le fichier."));
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -764,11 +800,11 @@ void MainWindow::checkAutoBackupDue()
         return;
 
     const QString timestamp = QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd_HHmmss"));
-    const QString destination = QDir(destinationRoot).filePath(QStringLiteral("E-Lab700_Sauvegarde_%1").arg(timestamp));
+    const QString destination = QDir(destinationRoot).filePath(tr("E-Lab700_Sauvegarde_%1").arg(timestamp));
 
     if (FileUtils::copyFolderRecursively(m_settings.captureFolder(), destination, GalleryModel::trashFolderName())) {
         m_settings.setLastAutoBackupAt(QDateTime::currentDateTime());
-        statusBar()->showMessage(QStringLiteral("Sauvegarde automatique effectuée."), 4000);
+        statusBar()->showMessage(tr("Sauvegarde automatique effectuée."), 4000);
     }
     // Silent on failure (e.g. destination drive unplugged) — this runs
     // unattended, and a background failure shouldn't interrupt class with a
@@ -780,7 +816,9 @@ void MainWindow::onLabTimerTick()
 {
     if (m_labSecondsRemaining <= 0) {
         m_labCountdownTimer.stop();
-        statusBar()->showMessage(QStringLiteral("Minuteur terminé !"), 5000);
+        statusBar()->showMessage(tr("Minuteur terminé !"), 5000);
+        if (m_settings.soundNotificationsEnabled())
+            QApplication::beep();
         return;
     }
     --m_labSecondsRemaining;

@@ -55,7 +55,7 @@ if(E_LAB_QT5)
         add_compile_definitions(_WIN32_WINNT=0x0601 WINVER=0x0601)
     endif()
 else()
-    find_package(Qt6 REQUIRED COMPONENTS Widgets Multimedia Concurrent)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets Multimedia Concurrent LinguistTools)
     set(ELAB_QT_LIBS Qt6::Widgets Qt6::Multimedia Qt6::Concurrent)
 endif()
 find_package(OpenCV REQUIRED COMPONENTS core imgcodecs imgproc videoio)
@@ -106,6 +106,8 @@ set(CORE_SOURCES
     ${WINDOW_CHROME_MAC_SOURCE}
     src/core/FileUtils.h
     src/core/FileUtils.cpp
+    src/core/ObservationJournal.h
+    src/core/ObservationJournal.cpp
 )
 
 set(UI_SOURCES
@@ -137,6 +139,10 @@ set(UI_SOURCES
     src/ui/PhotoEditorDialog.cpp
     src/ui/ComparisonDialog.h
     src/ui/ComparisonDialog.cpp
+    src/ui/RevealCompareWidget.h
+    src/ui/RevealCompareWidget.cpp
+    src/ui/JournalDialog.h
+    src/ui/JournalDialog.cpp
     src/ui/TrashDialog.h
     src/ui/TrashDialog.cpp
     src/ui/ScaleCalibrationDialog.h
@@ -249,6 +255,24 @@ target_link_libraries(MicroscopeLab PRIVATE
 
 if(APPLE)
     target_link_libraries(MicroscopeLab PRIVATE ${APPKIT_FRAMEWORK})
+endif()
+
+# ---------------------------------------------------------------------------
+# Translations (English — see README > Traduction / Translations)
+# ---------------------------------------------------------------------------
+# translations/elab700_en.ts is hand-maintained (source strings + English
+# translations), the same file lupdate merges new/changed tr() calls into
+# when the French UI text changes — see README for the lupdate command. Only
+# built for the Qt6 editions; the legacy Qt5/Windows 7 build stays French-only
+# to keep that path simple.
+if(NOT E_LAB_QT5)
+    set(ELAB_TS_FILES "${CMAKE_SOURCE_DIR}/translations/elab700_en.ts")
+    qt6_add_lrelease(MicroscopeLab TS_FILES ${ELAB_TS_FILES} QM_FILES_OUTPUT_VARIABLE ELAB_QM_FILES)
+    qt6_add_resources(MicroscopeLab "elab700_i18n"
+        PREFIX "/i18n"
+        BASE "${CMAKE_CURRENT_BINARY_DIR}"
+        FILES ${ELAB_QM_FILES}
+    )
 endif()
 
 install(TARGETS MicroscopeLab

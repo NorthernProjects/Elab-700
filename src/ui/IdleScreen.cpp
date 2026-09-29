@@ -18,7 +18,7 @@ IdleScreen::IdleScreen(QWidget *parent) : QWidget(parent)
     m_logoLabel->setAlignment(Qt::AlignCenter);
     const QPixmap logo(QStringLiteral(":/branding/logo.png"));
     if (!logo.isNull())
-        m_logoLabel->setPixmap(logo.scaledToWidth(360, Qt::SmoothTransformation));
+        m_logoLabel->setPixmap(logo.scaledToWidth(560, Qt::SmoothTransformation));
 
     auto *layout = new QVBoxLayout(this);
     layout->addStretch();
@@ -31,9 +31,9 @@ IdleScreen::IdleScreen(QWidget *parent) : QWidget(parent)
     // Keyframed as a full breathing cycle (dim -> bright -> dim) within a
     // single animation, so looping doesn't snap back abruptly each cycle.
     m_pulseAnimation = new QPropertyAnimation(m_opacityEffect, "opacity", this);
-    m_pulseAnimation->setKeyValueAt(0.0, 0.35);
+    m_pulseAnimation->setKeyValueAt(0.0, 0.55);
     m_pulseAnimation->setKeyValueAt(0.5, 1.0);
-    m_pulseAnimation->setKeyValueAt(1.0, 0.35);
+    m_pulseAnimation->setKeyValueAt(1.0, 0.55);
     m_pulseAnimation->setDuration(4000);
     m_pulseAnimation->setEasingCurve(QEasingCurve::InOutSine);
     m_pulseAnimation->setLoopCount(-1);

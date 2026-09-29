@@ -44,6 +44,8 @@ private slots:
     void onResolutionChanged(int index);
     void onBrowseFolder();
     void onChangePin();
+    void onStudentLockToggled(bool checked);
+    void onLanguageChanged(int index);
     void onIdleTimeoutChanged(int minutes);
     void onManageClasses();
     void onScaleBarCalibrationChanged(double value);
@@ -74,6 +76,9 @@ private:
     QCheckBox *m_lightThemeCheck;
     QCheckBox *m_gridCheck;
     QCheckBox *m_focusIndicatorCheck;
+    QCheckBox *m_soundNotificationsCheck;
+    QComboBox *m_languageCombo;
+    QSpinBox *m_maxBrightnessSpin;
     QCheckBox *m_scaleBarCheck;
     QDoubleSpinBox *m_scaleBarCalibrationSpin;
     QCheckBox *m_timeLapseCheck;

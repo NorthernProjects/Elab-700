@@ -2,7 +2,7 @@
 
 NullCameraBackend::NullCameraBackend(QObject *parent) : CameraBackend(parent) {}
 
-QString NullCameraBackend::backendName() const { return QStringLiteral("Aucune caméra (SDK non installé)"); }
+QString NullCameraBackend::backendName() const { return tr("Aucune caméra (SDK non installé)"); }
 
 QVector<CameraDeviceInfo> NullCameraBackend::enumerateDevices() { return {}; }
 

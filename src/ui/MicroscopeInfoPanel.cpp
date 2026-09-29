@@ -26,7 +26,7 @@ MicroscopeInfoPanel::MicroscopeInfoPanel(QWidget *parent) : QWidget(parent)
     layout->setSpacing(10);
 
     auto *headerRow = new QHBoxLayout();
-    m_titleLabel = new QLabel(QStringLiteral("Microscope"), this);
+    m_titleLabel = new QLabel(tr("Microscope"), this);
     m_titleLabel->setObjectName("microscopeInfoTitle");
     auto *closeButton = new QPushButton(QStringLiteral("✕"), this);
     closeButton->setObjectName("microscopeInfoClose");
@@ -38,12 +38,12 @@ MicroscopeInfoPanel::MicroscopeInfoPanel(QWidget *parent) : QWidget(parent)
     layout->addLayout(headerRow);
 
     // The user's microscope is whatever they own — no hardcoded spec sheet.
-    auto *subtitle = new QLabel(QStringLiteral("Microscopie numérique"), this);
+    auto *subtitle = new QLabel(tr("Microscopie numérique"), this);
     subtitle->setObjectName("microscopeInfoSubtitle");
     subtitle->setWordWrap(true);
     layout->addWidget(subtitle);
 
-    auto *cameraTitle = new QLabel(QStringLiteral("<b>Caméra</b>"), this);
+    auto *cameraTitle = new QLabel(QStringLiteral("<b>%1</b>").arg(tr("Caméra")), this);
     cameraTitle->setObjectName("microscopeInfoSection");
     layout->addWidget(cameraTitle);
 
@@ -59,20 +59,20 @@ MicroscopeInfoPanel::MicroscopeInfoPanel(QWidget *parent) : QWidget(parent)
         layout->addLayout(row);
     };
 
-    addRow(QStringLiteral("Connexion"), m_connectionValue);
-    addRow(QStringLiteral("Résolution"), m_resolutionValue);
-    addRow(QStringLiteral("Images/seconde"), m_fpsValue);
+    addRow(tr("Connexion"), m_connectionValue);
+    addRow(tr("Résolution"), m_resolutionValue);
+    addRow(tr("Images/seconde"), m_fpsValue);
 
     connect(closeButton, &QPushButton::clicked, this, &MicroscopeInfoPanel::closeRequested);
 
     // Learning aids (diagram + glossary): shown or hidden at runtime from
     // the "learning aids" feature flag — on for the school and grand-public
     // editions, off by default for the lab edition, always re-toggleable.
-    m_diagramButton = new QPushButton(QStringLiteral("Voir le schéma du microscope"), this);
+    m_diagramButton = new QPushButton(tr("Voir le schéma du microscope"), this);
     m_diagramButton->setCursor(Qt::PointingHandCursor);
     layout->addWidget(m_diagramButton);
 
-    m_glossaryButton = new QPushButton(QStringLiteral("Voir le glossaire"), this);
+    m_glossaryButton = new QPushButton(tr("Voir le glossaire"), this);
     m_glossaryButton->setCursor(Qt::PointingHandCursor);
     layout->addWidget(m_glossaryButton);
 
@@ -95,7 +95,7 @@ void MicroscopeInfoPanel::setLearningAidsVisible(bool visible)
 void MicroscopeInfoPanel::setMicroscopeName(const QString &name)
 {
     const QString trimmed = name.trimmed();
-    m_titleLabel->setText(trimmed.isEmpty() ? QStringLiteral("Microscope") : trimmed);
+    m_titleLabel->setText(trimmed.isEmpty() ? tr("Microscope") : trimmed);
 }
 
 void MicroscopeInfoPanel::setResolution(const QSize &size)
@@ -107,10 +107,10 @@ void MicroscopeInfoPanel::setResolution(const QSize &size)
 
 void MicroscopeInfoPanel::setFps(double fps)
 {
-    m_fpsValue->setText(QStringLiteral("%1 ips").arg(fps, 0, 'f', 1));
+    m_fpsValue->setText(tr("%1 ips").arg(fps, 0, 'f', 1));
 }
 
 void MicroscopeInfoPanel::setConnected(bool connected)
 {
-    m_connectionValue->setText(connected ? QStringLiteral("USB (active)") : QStringLiteral("Non connectée"));
+    m_connectionValue->setText(connected ? tr("USB (active)") : tr("Non connectée"));
 }

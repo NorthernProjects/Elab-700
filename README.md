@@ -232,6 +232,34 @@ les anciens scripts des variantes séparées, conservés pour référence.)
 Distribué sous licence MIT (voir `LICENSE`) — libre à vous de le partager, le
 modifier, l'adapter à votre propre microscope.
 
+## Traduction / Translations
+
+L'interface est disponible en français (langue source) et en anglais.
+Changeable dans les réglages ("Langue de l'interface") — nécessite un
+redémarrage de l'application pour s'appliquer (aucun widget ne se
+retraduit à chaud).
+
+Infrastructure Qt Linguist standard : chaque texte visible passe par
+`tr(...)` (ou `QT_TRANSLATE_NOOP` pour les tables statiques, ex.
+`GlossaryDialog.cpp`) ; `translations/elab700_en.ts` contient le texte
+source et sa traduction anglaise, compilé en `.qm` et embarqué dans
+l'exécutable au build (`qt6_add_lrelease` + ressource `:/i18n/`,
+voir `CMakeLists.txt`). Non disponible pour l'édition Windows 7/Qt5
+(reste français uniquement, pour garder ce chemin de build simple).
+
+Pour ajouter/modifier des textes traduisibles :
+
+```powershell
+# 1. Envelopper le nouveau texte dans tr("...") dans le code C++
+# 2. Régénérer les entrées à traduire (fusionne, ne perd rien d'existant) :
+& "C:\Qt\6.8.1\msvc2022_64\bin\lupdate.exe" src -ts translations\elab700_en.ts
+# 3. Éditer translations\elab700_en.ts : remplir les nouvelles
+#    <translation type="unfinished"></translation> et retirer l'attribut
+#    type="unfinished" une fois la traduction posée
+# 4. Recompiler — lrelease s'exécute automatiquement au build
+cmake --build build --config Release
+```
+
 ## Version Windows 7 (32 bits, Qt 5.15)
 
 Qt 6 exige Windows 10 minimum, donc une version « ancienne » est produite à
