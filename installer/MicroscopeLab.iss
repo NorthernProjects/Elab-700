@@ -11,7 +11,7 @@
 ; windeployqt + the OpenCV DLL copy — see README.md > Compiler).
 
 #define MyAppName "E-Lab 700"
-#define MyAppVersion "2.2.0"
+#define MyAppVersion "2.3.0"
 #define MyAppPublisher "Communaute E-Lab 700 (open source)"
 #define MyAppExeName "E-Lab700.exe"
 
