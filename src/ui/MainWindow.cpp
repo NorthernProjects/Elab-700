@@ -575,6 +575,37 @@ void MainWindow::onMicroscopeInfoRequested()
     m_microscopeInfoPanel->show();
 }
 
+namespace {
+// Small filled-circle icon so a picker menu entry shows its state at a
+// glance (green = this is the current one, red = an alternative) instead of
+// just a checkmark.
+QIcon coloredDotIcon(const QColor &color)
+{
+    QPixmap pixmap(16, 16);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(color);
+    painter.drawEllipse(2, 2, 12, 12);
+    return QIcon(pixmap);
+}
+
+// The microscope's native presets (640x480, 1280x960, 2592x1944) are all
+// 4:3; a laptop's own built-in webcam is typically 16:9 (e.g. 1280x720) or
+// some other non-4:3 shape. Used only to decide whether picking a device
+// from the connection menu should require the teacher PIN (see
+// onConnectionClicked) — a heuristic, not a hard filter, since the device
+// list itself still shows whatever was actually detected.
+bool looksLikeMicroscopeAspectRatio(const QSize &resolution)
+{
+    if (resolution.height() <= 0)
+        return false;
+    const double ratio = static_cast<double>(resolution.width()) / resolution.height();
+    return qAbs(ratio - 4.0 / 3.0) < 0.05;
+}
+}
+
 void MainWindow::onResolutionClicked()
 {
     CameraBackend *backend = m_cameraManager.backend();
@@ -590,9 +621,9 @@ void MainWindow::onResolutionClicked()
     const QSize current = backend->currentResolution();
     QMenu menu(this);
     for (const QSize &size : resolutions) {
-        QAction *action = menu.addAction(QStringLiteral("%1 x %2").arg(size.width()).arg(size.height()));
-        action->setCheckable(true);
-        action->setChecked(size == current);
+        const bool isCurrent = (size == current);
+        QAction *action = menu.addAction(coloredDotIcon(isCurrent ? QColor("#35e08a") : QColor("#ff5c6c")),
+                                          QStringLiteral("%1 x %2").arg(size.width()).arg(size.height()));
         connect(action, &QAction::triggered, this, [this, size]() {
             // A manual pick sticks — startResolutionAutoTuning() (run on
             // every fresh connect) no longer overrides it on a later
@@ -621,23 +652,6 @@ void MainWindow::onResolutionClicked()
         });
     }
     menu.exec(QCursor::pos());
-}
-
-namespace {
-// Small filled-circle icon so each device in the picker menu shows its live
-// connection state at a glance (green = this is the one currently open, red
-// = detected but not connected) instead of just a checkmark.
-QIcon coloredDotIcon(const QColor &color)
-{
-    QPixmap pixmap(16, 16);
-    pixmap.fill(Qt::transparent);
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(color);
-    painter.drawEllipse(2, 2, 12, 12);
-    return QIcon(pixmap);
-}
 }
 
 void MainWindow::onConnectionClicked()
@@ -700,7 +714,15 @@ void MainWindow::onConnectionClicked()
                                               label);
             action->setCheckable(true);
             action->setChecked(isCurrent);
-            connect(action, &QAction::triggered, this, [this, device]() {
+            const bool needsPin = !looksLikeMicroscopeAspectRatio(device.resolution)
+                && m_settings.featurePinLockEnabled() && !m_settings.teacherPinHash().isEmpty();
+            connect(action, &QAction::triggered, this, [this, device, needsPin]() {
+                // Devices that don't have the microscope's 4:3 shape are most
+                // likely a laptop's own built-in webcam — gate those behind
+                // the teacher PIN so a student can't switch away from the
+                // microscope to it (accidentally or otherwise) from this menu.
+                if (needsPin && !confirmTeacherPin())
+                    return;
                 if (!m_cameraManager.forceConnect(device.id)) {
                     statusBar()->showMessage(
                         tr("Impossible de se connecter à %1.").arg(device.displayName), 4000);

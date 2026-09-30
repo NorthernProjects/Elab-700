@@ -234,9 +234,11 @@ QVector<QSize> UvcCameraBackend::supportedResolutions() const
     if (!isOpen())
         return {};
     // OpenCV's VideoCapture has no portable "list supported resolutions"
-    // query; offering the negotiated one plus the microscope's native 4:3
-    // presets is good enough for the teacher panel's dropdown.
-    return {currentResolution(), QSize(2592, 1944), QSize(1280, 960), QSize(640, 480)};
+    // query, so this offers the microscope's three native 4:3 presets
+    // directly — not the live currentResolution() as an extra leading
+    // entry, which used to duplicate whichever preset the camera happened
+    // to already be on and show it twice in the picker menu.
+    return {QSize(2592, 1944), QSize(1280, 960), QSize(640, 480)};
 }
 
 bool UvcCameraBackend::setResolution(const QSize &size)
@@ -255,8 +257,23 @@ bool UvcCameraBackend::setResolution(const QSize &size)
     // this stays a plain property set on the already-open capture — some
     // resolutions may not take effect on every driver, but the connected
     // device never changes underneath the user.
+    //
+    // Briefly pausing frame reads around the property change (rather than
+    // setting it while captureFrame() keeps reading concurrently) gives the
+    // DirectShow graph a quiet moment to renegotiate the format, which is a
+    // much lower-risk way to improve the odds of the change actually
+    // sticking than reopening the device.
+    const bool wasRunning = m_captureTimer.isActive();
+    if (wasRunning)
+        m_captureTimer.stop();
+
     m_capture->set(cv::CAP_PROP_FRAME_WIDTH, size.width());
     m_capture->set(cv::CAP_PROP_FRAME_HEIGHT, size.height());
+
+    if (wasRunning) {
+        m_lastGoodFrameClock.start();
+        m_captureTimer.start(kCaptureIntervalMs);
+    }
     return true;
 }
 
