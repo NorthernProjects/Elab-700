@@ -246,21 +246,6 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     languageRowLayout->addWidget(m_languageCombo);
     displayLayout->addWidget(languageRow);
 
-    // Caps the student-facing brightness slider on the main screen (bottom
-    // bar) so the class can't crank it up enough to wash the image out.
-    auto *maxBrightnessRow = new QWidget(displayGroup);
-    auto *maxBrightnessRowLayout = new QHBoxLayout(maxBrightnessRow);
-    maxBrightnessRowLayout->setContentsMargins(0, 0, 0, 0);
-    auto *maxBrightnessLabel = new QLabel(tr("Limite de luminosité pour les élèves"), maxBrightnessRow);
-    m_maxBrightnessSpin = new QSpinBox(maxBrightnessRow);
-    m_maxBrightnessSpin->setRange(10, 100);
-    m_maxBrightnessSpin->setSuffix(QStringLiteral(" %"));
-    m_maxBrightnessSpin->setValue(m_settings->maxBrightnessPercent());
-    m_maxBrightnessSpin->setMinimumWidth(widthForWidestText(m_maxBrightnessSpin, QStringLiteral("100 %"), 40));
-    maxBrightnessRowLayout->addWidget(maxBrightnessLabel, 1);
-    maxBrightnessRowLayout->addWidget(m_maxBrightnessSpin);
-    displayLayout->addWidget(maxBrightnessRow);
-
     m_scaleBarCheck = new QCheckBox(tr("Afficher une échelle de mesure"), displayGroup);
     m_scaleBarCheck->setChecked(m_settings->showScaleBar());
     displayLayout->addWidget(m_scaleBarCheck);
@@ -492,7 +477,6 @@ TeacherPanel::TeacherPanel(AppSettings *settings, CameraBackend *backend, std::f
     connect(m_lightThemeCheck, &QCheckBox::toggled, m_settings, &AppSettings::setLightTheme);
     connect(m_soundNotificationsCheck, &QCheckBox::toggled, m_settings, &AppSettings::setSoundNotificationsEnabled);
     connect(m_languageCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &TeacherPanel::onLanguageChanged);
-    connect(m_maxBrightnessSpin, QOverload<int>::of(&QSpinBox::valueChanged), m_settings, &AppSettings::setMaxBrightnessPercent);
     connect(m_gridCheck, &QCheckBox::toggled, m_settings, &AppSettings::setShowGrid);
     connect(m_focusIndicatorCheck, &QCheckBox::toggled, m_settings, &AppSettings::setShowFocusIndicator);
     connect(m_scaleBarCheck, &QCheckBox::toggled, m_settings, &AppSettings::setShowScaleBar);

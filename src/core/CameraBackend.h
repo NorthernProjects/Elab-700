@@ -42,9 +42,6 @@ public:
     virtual bool autoExposure() const = 0;
 
     // Normalized 0-100 controls; backend maps to native units internally.
-    virtual bool setBrightness(int value0to100) = 0;
-    virtual int brightness() const = 0;
-
     virtual bool setExposure(int value0to100) = 0; // manual mode only
     virtual int exposure() const = 0;
 

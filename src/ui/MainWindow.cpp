@@ -204,9 +204,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_settings, &AppSettings::scaleBarMicronsPer100PxChanged, m_videoView, &VideoView::setScaleBarCalibration);
     m_videoView->setScaleBarCalibration(m_settings.scaleBarMicronsPer100Px());
 
-    connect(&m_settings, &AppSettings::maxBrightnessPercentChanged, m_bottomBar, &BottomBar::setBrightnessLimit);
-    m_bottomBar->setBrightnessLimit(m_settings.maxBrightnessPercent());
-
     connect(&m_timeLapseTimer, &QTimer::timeout, this, &MainWindow::onTimeLapseTick);
     connect(&m_labCountdownTimer, &QTimer::timeout, this, &MainWindow::onLabTimerTick);
 
@@ -290,7 +287,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_bottomBar, &BottomBar::zoomInRequested, this, &MainWindow::onZoomInRequested);
     connect(m_bottomBar, &BottomBar::zoomOutRequested, this, &MainWindow::onZoomOutRequested);
     connect(m_bottomBar, &BottomBar::zoomResetRequested, this, &MainWindow::onZoomResetRequested);
-    connect(m_bottomBar, &BottomBar::brightnessChanged, this, &MainWindow::onBrightnessChanged);
     connect(m_topBar, &TopStatusBar::teacherModeRequested, this, &MainWindow::onTeacherModeRequested);
     connect(m_topBar, &TopStatusBar::microscopeInfoRequested, this, &MainWindow::onMicroscopeInfoRequested);
     connect(m_topBar, &TopStatusBar::resolutionClicked, this, &MainWindow::onResolutionClicked);
@@ -375,15 +371,6 @@ void MainWindow::onZoomResetRequested()
 {
     m_zoomFactor = kMinZoom;
     m_bottomBar->setZoomPercent(static_cast<int>(m_zoomFactor * 100));
-}
-
-void MainWindow::onBrightnessChanged(int percent)
-{
-    // Defense in depth: the slider's own range is already capped at
-    // maxBrightnessPercent() (see setBrightnessLimit), but clamp again here
-    // in case that setting changed after the slider was constructed.
-    const int clamped = qMin(percent, m_settings.maxBrightnessPercent());
-    m_cameraManager.backend()->setBrightness(clamped);
 }
 
 void MainWindow::onGroupSelectionRequested()
@@ -537,15 +524,6 @@ void MainWindow::onCameraConnected(const CameraDeviceInfo &info)
     m_videoView->setCameraConnected(true);
     m_microscopeInfoPanel->setConnected(true);
     m_microscopeInfoPanel->setResolution(backend->currentResolution());
-    // Reflect whatever brightness the backend actually opened with (clamped
-    // to the teacher's ceiling) rather than leaving the slider at its
-    // construction-time default of 50% — read-only: writing this same value
-    // straight back to the driver right after open() caused some UVC
-    // cameras (including the microscope's) to drop or corrupt the stream,
-    // since CAP_PROP_BRIGHTNESS support/range is unreliable across drivers.
-    // Only the user dragging the slider should ever call setBrightness().
-    const int initialBrightness = qMin(backend->brightness(), m_settings.maxBrightnessPercent());
-    m_bottomBar->setBrightnessPercent(initialBrightness);
     if (m_userChoseResolution) {
         // Respect the teacher/student's own pick across reconnects instead
         // of silently overriding it with the auto-tuner below. Deferred

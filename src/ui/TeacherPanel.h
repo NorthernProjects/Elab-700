@@ -78,7 +78,6 @@ private:
     QCheckBox *m_focusIndicatorCheck;
     QCheckBox *m_soundNotificationsCheck;
     QComboBox *m_languageCombo;
-    QSpinBox *m_maxBrightnessSpin;
     QCheckBox *m_scaleBarCheck;
     QDoubleSpinBox *m_scaleBarCalibrationSpin;
     QCheckBox *m_timeLapseCheck;

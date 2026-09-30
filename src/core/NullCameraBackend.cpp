@@ -26,10 +26,6 @@ bool NullCameraBackend::setAutoExposure(bool /*enabled*/) { return false; }
 
 bool NullCameraBackend::autoExposure() const { return false; }
 
-bool NullCameraBackend::setBrightness(int /*value0to100*/) { return false; }
-
-int NullCameraBackend::brightness() const { return 0; }
-
 bool NullCameraBackend::setExposure(int /*value0to100*/) { return false; }
 
 int NullCameraBackend::exposure() const { return 0; }

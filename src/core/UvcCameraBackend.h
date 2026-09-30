@@ -57,9 +57,6 @@ public:
     bool setAutoExposure(bool enabled) override;
     bool autoExposure() const override;
 
-    bool setBrightness(int value0to100) override;
-    int brightness() const override;
-
     bool setExposure(int value0to100) override;
     int exposure() const override;
 
@@ -70,6 +67,14 @@ private slots:
     void captureFrame();
 
 private:
+    // Shared by open() and setResolution(): creates and configures a fresh
+    // cv::VideoCapture at the given index/size, replacing m_capture on
+    // success. Reopening (rather than calling set() on an already-streaming
+    // capture) is what actually gets a DirectShow driver to renegotiate the
+    // frame size reliably — many drivers silently ignore a mid-stream
+    // FRAME_WIDTH/HEIGHT change instead.
+    bool openCaptureAt(int index, const QSize &size);
+
     QScopedPointer<cv::VideoCapture> m_capture;
     QTimer m_captureTimer;
     QElapsedTimer m_fpsClock;

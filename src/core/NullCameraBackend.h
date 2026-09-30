@@ -28,9 +28,6 @@ public:
     bool setAutoExposure(bool enabled) override;
     bool autoExposure() const override;
 
-    bool setBrightness(int value0to100) override;
-    int brightness() const override;
-
     bool setExposure(int value0to100) override;
     int exposure() const override;
 

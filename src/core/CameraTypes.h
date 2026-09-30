@@ -21,7 +21,7 @@ struct CameraFrame {
     quint64 timestampMs = 0;
 };
 
-// Exposure/white balance/brightness use a normalized 0-100 range in the UI;
+// Exposure/white balance/gain use a normalized 0-100 range in the UI;
 // each backend maps that range to whatever units the real hardware expects.
 struct CameraRange {
     int min = 0;

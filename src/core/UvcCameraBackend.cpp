@@ -88,6 +88,37 @@ QVector<CameraDeviceInfo> UvcCameraBackend::probeDevices()
     return devices;
 }
 
+bool UvcCameraBackend::openCaptureAt(int index, const QSize &size)
+{
+    auto capture = QScopedPointer<cv::VideoCapture>(new cv::VideoCapture(index, kCaptureBackend));
+    if (!capture->isOpened())
+        return false;
+
+    capture->set(cv::CAP_PROP_FRAME_WIDTH, size.width());
+    capture->set(cv::CAP_PROP_FRAME_HEIGHT, size.height());
+
+    // The driver's own default gain is 0, which renders as a near-black
+    // image until someone manually raises it in the teacher panel — 35
+    // gives a properly usable picture out of the box. Still adjustable via
+    // setGain() afterwards.
+    capture->set(cv::CAP_PROP_GAIN, 35);
+
+    // Disable the driver's own auto-exposure/auto-WB instead of leaving it
+    // running by default: those commonly "hunt" (continuously nudge
+    // exposure/color trying to converge), which reads as a visibly
+    // flickering/wavering image. Deliberately not also forcing a specific
+    // CAP_PROP_EXPOSURE value here — that number's valid range/scale is
+    // driver-specific and a wrong one can itself cause instability; manual
+    // mode simply keeps whatever exposure the driver already had. Auto mode
+    // is still one tap away (teacher panel) for whoever wants it.
+    capture->set(cv::CAP_PROP_AUTO_EXPOSURE, 0.25); // 0.25 = manual on this backend's convention
+    capture->set(cv::CAP_PROP_AUTO_WB, 0);
+
+    m_capture.reset(capture.take());
+    m_openIndex = index;
+    return true;
+}
+
 bool UvcCameraBackend::open(const QString &deviceId)
 {
     if (isOpen())
@@ -98,35 +129,13 @@ bool UvcCameraBackend::open(const QString &deviceId)
     if (!ok)
         return false;
 
-    auto capture = QScopedPointer<cv::VideoCapture>(new cv::VideoCapture(index, kCaptureBackend));
-    if (!capture->isOpened())
-        return false;
-
     // Default to a lower resolution than the microscope's native 2592x1944:
     // the full-res stream only delivers ~2 fps over USB, too choppy for a
     // live student view. Same 4:3 aspect ratio, so no cropping/distortion.
     // Full resolution is still reachable via setResolution() (teacher panel).
-    capture->set(cv::CAP_PROP_FRAME_WIDTH, 1280);
-    capture->set(cv::CAP_PROP_FRAME_HEIGHT, 960);
+    if (!openCaptureAt(index, QSize(1280, 960)))
+        return false;
 
-    // The driver's own default gain is 0, which renders as a near-black
-    // image until someone manually raises it in the teacher panel — 35
-    // gives a properly usable picture out of the box. Still adjustable via
-    // setGain() afterwards.
-    capture->set(cv::CAP_PROP_GAIN, 35);
-
-    // Force manual exposure/white balance with fixed starting values instead
-    // of leaving the driver's own auto-exposure/auto-WB running by default:
-    // those commonly "hunt" (continuously nudge exposure/color up and down
-    // trying to converge), which reads as a visibly flickering/wavering
-    // image — exactly what a live classroom view must never do. Auto mode
-    // is still one tap away (teacher panel), for whoever wants it.
-    capture->set(cv::CAP_PROP_AUTO_EXPOSURE, 0.25); // 0.25 = manual on this backend's convention
-    capture->set(cv::CAP_PROP_EXPOSURE, 50);
-    capture->set(cv::CAP_PROP_AUTO_WB, 0);
-
-    m_capture.reset(capture.take());
-    m_openIndex = index;
     m_frameCountSinceFpsUpdate = 0;
     m_fpsClock.start();
     m_lastGoodFrameClock.start();
@@ -234,8 +243,30 @@ bool UvcCameraBackend::setResolution(const QSize &size)
 {
     if (!isOpen())
         return false;
-    m_capture->set(cv::CAP_PROP_FRAME_WIDTH, size.width());
-    m_capture->set(cv::CAP_PROP_FRAME_HEIGHT, size.height());
+
+    // Calling set() on an already-open, actively-streaming DirectShow
+    // capture is unreliable for frame size specifically — several drivers
+    // (this one included, per real-world testing) silently ignore a
+    // mid-stream FRAME_WIDTH/HEIGHT change instead of renegotiating, which
+    // is why picking a resolution from the menu appeared to do nothing.
+    // Reopening the device with the new size requested before the first
+    // read (openCaptureAt(), the same sequence open() uses) gives the
+    // driver a real chance to apply it.
+    m_captureTimer.stop();
+    const int index = m_openIndex;
+
+    if (!openCaptureAt(index, size)) {
+        // Reopening failed outright (device briefly busy/unplugged) — treat
+        // this as a full disconnect rather than leaving the backend in a
+        // half-open state with a dead capture object.
+        m_capture.reset();
+        m_openIndex = -1;
+        emit deviceDisconnected();
+        return false;
+    }
+
+    m_lastGoodFrameClock.start();
+    m_captureTimer.start(kCaptureIntervalMs);
     return true;
 }
 
@@ -278,20 +309,6 @@ bool UvcCameraBackend::autoExposure() const
     if (!isOpen())
         return false;
     return m_capture->get(cv::CAP_PROP_AUTO_EXPOSURE) >= 0.5;
-}
-
-bool UvcCameraBackend::setBrightness(int value0to100)
-{
-    if (!isOpen())
-        return false;
-    return m_capture->set(cv::CAP_PROP_BRIGHTNESS, value0to100);
-}
-
-int UvcCameraBackend::brightness() const
-{
-    if (!isOpen())
-        return 0;
-    return qBound(0, static_cast<int>(m_capture->get(cv::CAP_PROP_BRIGHTNESS)), 100);
 }
 
 bool UvcCameraBackend::setExposure(int value0to100)
