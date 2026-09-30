@@ -21,23 +21,16 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
         m_logoLabel->setPixmap(logo.scaledToHeight(32, Qt::SmoothTransformation));
 
     // A QPushButton (not QLabel) — clicking it opens a menu listing every
-    // detected camera (connected or not) so a teacher can force-connect to
-    // a specific one if auto-detection picked the wrong device or none.
+    // detected camera (connected or not), plus the actual on/off action, so
+    // a teacher can force-connect to a specific device or power the camera
+    // down from one place. Merged with the power indicator (no separate
+    // button any more): green/red now reflects power state, not connection
+    // state — see refreshConnectionDisplay().
     m_connectionButton = new QPushButton(tr("● Caméra non connectée"));
     m_connectionButton->setObjectName("connectionLabel");
     m_connectionButton->setFlat(true);
     m_connectionButton->setCursor(Qt::PointingHandCursor);
-    m_connectionButton->setToolTip(tr("Voir/choisir la caméra"));
-
-    // Separate from m_connectionButton's device picker: a plain on/off
-    // switch so a teacher can stop powering the camera between uses without
-    // wading into the device menu each time (V-next requirement).
-    m_powerButton = new QPushButton(QStringLiteral("⏻"));
-    m_powerButton->setObjectName("powerButton");
-    m_powerButton->setFixedSize(28, 28);
-    m_powerButton->setCursor(Qt::PointingHandCursor);
-    m_powerButton->setToolTip(tr("Éteindre la caméra"));
-    m_powerButton->setProperty("poweredOn", QVariant(true));
+    m_connectionButton->setToolTip(tr("Voir/choisir la caméra, l'allumer ou l'éteindre"));
 
     m_fpsLabel = new QLabel(tr("-- ips"));
     m_fpsLabel->setObjectName("fpsLabel");
@@ -103,8 +96,6 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     leftLayout->addWidget(m_logoLabel);
     leftLayout->addSpacing(16);
     leftLayout->addWidget(m_connectionButton);
-    leftLayout->addSpacing(6);
-    leftLayout->addWidget(m_powerButton);
     leftLayout->addSpacing(24);
     leftLayout->addWidget(m_resolutionButton);
     leftLayout->addSpacing(24);
@@ -134,23 +125,35 @@ TopStatusBar::TopStatusBar(QWidget *parent) : QWidget(parent)
     connect(m_resolutionButton, &QPushButton::clicked, this, &TopStatusBar::resolutionClicked);
     connect(m_connectionButton, &QPushButton::clicked, this, &TopStatusBar::connectionClicked);
     connect(m_helpButton, &QPushButton::clicked, this, &TopStatusBar::helpRequested);
-    connect(m_powerButton, &QPushButton::clicked, this, &TopStatusBar::powerToggleRequested);
     connect(m_quitButton, &QPushButton::clicked, this, &TopStatusBar::quitRequested);
 }
 
 void TopStatusBar::setConnected(bool connected, const QString &modelName)
 {
-    if (connected) {
-        m_connectionButton->setText(modelName.isEmpty()
-            ? tr("● Caméra connectée")
-            : tr("● Caméra connectée (%1)").arg(modelName));
-        m_connectionButton->setProperty("connected", QVariant(true));
-    } else {
-        m_connectionButton->setText(tr("● Caméra non connectée"));
-        m_connectionButton->setProperty("connected", QVariant(false));
+    m_isConnected = connected;
+    m_lastModelName = modelName;
+    if (!connected) {
         m_fpsLabel->setText(tr("-- ips"));
         m_resolutionButton->setText(QStringLiteral("--x--"));
     }
+    refreshConnectionDisplay();
+}
+
+void TopStatusBar::refreshConnectionDisplay()
+{
+    // Color reflects power state (green = on, red = off) — not connection
+    // state — so "off" reads as a deliberate mode rather than looking the
+    // same as a camera that's simply missing/not found yet.
+    if (!m_isPoweredOn) {
+        m_connectionButton->setText(tr("⏻ Caméra éteinte"));
+    } else if (m_isConnected) {
+        m_connectionButton->setText(m_lastModelName.isEmpty()
+            ? tr("● Caméra connectée")
+            : tr("● Caméra connectée (%1)").arg(m_lastModelName));
+    } else {
+        m_connectionButton->setText(tr("● Caméra non connectée"));
+    }
+    m_connectionButton->setProperty("connected", QVariant(m_isPoweredOn));
     m_connectionButton->style()->unpolish(m_connectionButton);
     m_connectionButton->style()->polish(m_connectionButton);
 }
@@ -171,11 +174,8 @@ void TopStatusBar::setResolution(const QSize &size)
 
 void TopStatusBar::setCameraPoweredIndicator(bool on)
 {
-    m_powerButton->setText(on ? QStringLiteral("⏻") : QStringLiteral("⭘"));
-    m_powerButton->setToolTip(on ? tr("Éteindre la caméra") : tr("Allumer la caméra"));
-    m_powerButton->setProperty("poweredOn", QVariant(on));
-    m_powerButton->style()->unpolish(m_powerButton);
-    m_powerButton->style()->polish(m_powerButton);
+    m_isPoweredOn = on;
+    refreshConnectionDisplay();
 }
 
 void TopStatusBar::setGroupButtonVisible(bool visible)

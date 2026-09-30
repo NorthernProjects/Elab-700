@@ -289,9 +289,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_topBar, &TopStatusBar::microscopeInfoRequested, this, &MainWindow::onMicroscopeInfoRequested);
     connect(m_topBar, &TopStatusBar::resolutionClicked, this, &MainWindow::onResolutionClicked);
     connect(m_topBar, &TopStatusBar::connectionClicked, this, &MainWindow::onConnectionClicked);
-    connect(m_topBar, &TopStatusBar::powerToggleRequested, this, [this]() {
-        m_cameraManager.setPoweredOn(!m_cameraManager.isPoweredOn());
-    });
+    // Power toggle now lives inside the device-picker menu itself (see
+    // onConnectionClicked) — the top-bar button merged with the connection
+    // indicator, so there's no separate click target for it any more.
     // Goes through close() (not qApp->quit()) so closeEvent()'s PIN check
     // still applies when student-mode lock is on — a quit button shouldn't
     // be a bypass for the close button right next to it.
@@ -542,19 +542,33 @@ void MainWindow::onCameraConnected(const CameraDeviceInfo &info)
     m_bottomBar->setBrightnessPercent(initialBrightness);
     if (m_userChoseResolution) {
         // Respect the teacher/student's own pick across reconnects instead
-        // of silently overriding it with the auto-tuner below.
-        backend->setResolution(m_userChosenResolution);
-        const QSize applied = backend->currentResolution();
-        m_topBar->setResolution(applied);
-        m_microscopeInfoPanel->setResolution(applied);
-    } else {
+        // of silently overriding it with the auto-tuner below. Deferred
+        // (not called synchronously here): reconfiguring the capture format
+        // in the same call stack as open() — right as the DirectShow graph
+        // is still settling — was unstable on some drivers (crashed on
+        // camera select). A short pause first lets it stabilize.
+        QTimer::singleShot(400, this, [this]() {
+            CameraBackend *liveBackend = m_cameraManager.backend();
+            if (!liveBackend->isOpen())
+                return;
+            liveBackend->setResolution(m_userChosenResolution);
+            const QSize applied = liveBackend->currentResolution();
+            m_topBar->setResolution(applied);
+            m_microscopeInfoPanel->setResolution(applied);
+        });
+    } else if (!m_autoTuningDoneOnce) {
         // Sharp in the eyepieces but soft on screen usually means the
         // captured resolution is lower than what's needed to fill the
         // display without upscaling blur — pick the highest resolution the
         // camera can sustain at a usable live frame rate automatically,
         // rather than leaving everyone stuck with whatever conservative
-        // default was requested at open() time.
-        startResolutionAutoTuning();
+        // default was requested at open() time. Only ever done once per
+        // session (see m_autoTuningDoneOnce) — cycling setResolution()
+        // through several candidates is exactly the kind of repeated format
+        // renegotiation that proved unstable, so later reconnects/device
+        // switches just keep whatever resolution they open with instead.
+        m_autoTuningDoneOnce = true;
+        QTimer::singleShot(400, this, [this]() { startResolutionAutoTuning(); });
     }
 }
 
@@ -689,10 +703,17 @@ void MainWindow::onConnectionClicked()
             QAction *note = menu.addAction(tr("Aucune caméra ne ressemble au microscope — tout est affiché"));
             note->setEnabled(false);
         }
+        // "Nom du microscope" (Réglages) replaces the generic "Caméra USB"
+        // label when set, e.g. "OMAX Caméra" — same setting already used
+        // for the top-bar title, reused here instead of a second field.
+        const QString microscopeName = m_settings.microscopeName().trimmed();
         for (const CameraDeviceInfo &device : devices) {
             const bool isCurrent = m_cameraManager.isConnected() && device.id == m_cameraManager.currentDeviceId();
+            const QString label = microscopeName.isEmpty()
+                ? device.displayName
+                : tr("%1 (%2x%3)").arg(microscopeName).arg(device.resolution.width()).arg(device.resolution.height());
             QAction *action = menu.addAction(coloredDotIcon(isCurrent ? QColor("#35e08a") : QColor("#ff5c6c")),
-                                              device.displayName);
+                                              label);
             action->setCheckable(true);
             action->setChecked(isCurrent);
             connect(action, &QAction::triggered, this, [this, device]() {

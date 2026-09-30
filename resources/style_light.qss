@@ -120,39 +120,6 @@ QMainWindow, QDialog {
     font-weight: bold;
 }
 
-#powerButton {
-    background-color: transparent;
-    border: 1px solid #c7d6e0;
-    border-radius: 14px;
-    font-size: 13px;
-    color: #6b8398;
-}
-
-#powerButton:hover {
-    background-color: #dff3f4;
-    border-color: #0e8a91;
-}
-
-#powerButton[poweredOn="true"] {
-    background-color: #35e08a;
-    color: #ffffff;
-    border-color: #1a9c5c;
-}
-
-#powerButton[poweredOn="true"]:hover {
-    background-color: #2bc97a;
-}
-
-#powerButton[poweredOn="false"] {
-    background-color: #ff5c6c;
-    color: #ffffff;
-    border-color: #d1364a;
-}
-
-#powerButton[poweredOn="false"]:hover {
-    background-color: #ea4a5a;
-}
-
 #groupButton {
     background: transparent;
     border: 1px solid #c7d6e0;

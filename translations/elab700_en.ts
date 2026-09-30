@@ -1154,27 +1154,27 @@ Stop</translation>
         <translation>Incorrect PIN code.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="584"/>
+        <location filename="../src/ui/MainWindow.cpp" line="598"/>
         <source>Aucune caméra connectée.</source>
         <translation>No camera connected.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="613"/>
+        <location filename="../src/ui/MainWindow.cpp" line="627"/>
         <source>Résolution : %1 x %2</source>
         <translation>Resolution: %1 x %2</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="619"/>
+        <location filename="../src/ui/MainWindow.cpp" line="633"/>
         <source>La caméra n&apos;a pas accepté cette résolution (reste à %1 x %2).</source>
         <translation>The camera did not accept this resolution (staying at %1 x %2).</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="668"/>
+        <location filename="../src/ui/MainWindow.cpp" line="682"/>
         <source>Caméra allumée (cliquer pour éteindre)</source>
         <translation>Camera on (click to turn off)</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="669"/>
+        <location filename="../src/ui/MainWindow.cpp" line="683"/>
         <source>Caméra éteinte (cliquer pour allumer)</source>
         <translation>Camera off (click to turn on)</translation>
     </message>
@@ -1187,68 +1187,73 @@ Stop</translation>
         <translation type="vanished">Camera off</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="676"/>
+        <location filename="../src/ui/MainWindow.cpp" line="690"/>
         <source>Déconnecter la caméra</source>
         <translation>Disconnect the camera</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="679"/>
+        <location filename="../src/ui/MainWindow.cpp" line="693"/>
         <source>Caméra déconnectée.</source>
         <translation>Camera disconnected.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="685"/>
+        <location filename="../src/ui/MainWindow.cpp" line="699"/>
         <source>Aucune caméra détectée</source>
         <translation>No camera detected</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="689"/>
+        <location filename="../src/ui/MainWindow.cpp" line="703"/>
         <source>Aucune caméra ne ressemble au microscope — tout est affiché</source>
         <translation>No camera looks like the microscope — showing everything</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="701"/>
+        <location filename="../src/ui/MainWindow.cpp" line="714"/>
+        <source>%1 (%2x%3)</source>
+        <translation>%1 (%2x%3)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="722"/>
         <source>Impossible de se connecter à %1.</source>
         <translation>Could not connect to %1.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="732"/>
+        <location filename="../src/ui/MainWindow.cpp" line="753"/>
         <source>Renommer la photo</source>
         <translation>Rename photo</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="733"/>
+        <location filename="../src/ui/MainWindow.cpp" line="754"/>
         <source>Nom du fichier :</source>
         <translation>File name:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="743"/>
-        <location filename="../src/ui/MainWindow.cpp" line="750"/>
+        <location filename="../src/ui/MainWindow.cpp" line="764"/>
+        <location filename="../src/ui/MainWindow.cpp" line="771"/>
         <source>Renommer</source>
         <translation>Rename</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="743"/>
+        <location filename="../src/ui/MainWindow.cpp" line="764"/>
         <source>Un fichier porte déjà ce nom.</source>
         <translation>A file with this name already exists.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="750"/>
+        <location filename="../src/ui/MainWindow.cpp" line="771"/>
         <source>Impossible de renommer le fichier.</source>
         <translation>Could not rename the file.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="860"/>
+        <location filename="../src/ui/MainWindow.cpp" line="881"/>
         <source>E-Lab700_Sauvegarde_%1</source>
         <translation>E-Lab700_Backup_%1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="864"/>
+        <location filename="../src/ui/MainWindow.cpp" line="885"/>
         <source>Sauvegarde automatique effectuée.</source>
         <translation>Automatic backup completed.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="876"/>
+        <location filename="../src/ui/MainWindow.cpp" line="897"/>
         <source>Minuteur terminé !</source>
         <translation>Timer finished!</translation>
     </message>
@@ -2154,83 +2159,89 @@ Choose a PIN code (4 digits minimum):</translation>
 <context>
     <name>TopStatusBar</name>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="26"/>
-        <location filename="../src/ui/TopStatusBar.cpp" line="149"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="29"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="154"/>
         <source>● Caméra non connectée</source>
         <translation>● Camera not connected</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="30"/>
         <source>Voir/choisir la caméra</source>
-        <translation>View/choose the camera</translation>
+        <translation type="vanished">View/choose the camera</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="39"/>
-        <location filename="../src/ui/TopStatusBar.cpp" line="175"/>
         <source>Éteindre la caméra</source>
-        <translation>Turn off the camera</translation>
+        <translation type="vanished">Turn off the camera</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="42"/>
-        <location filename="../src/ui/TopStatusBar.cpp" line="151"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="33"/>
+        <source>Voir/choisir la caméra, l&apos;allumer ou l&apos;éteindre</source>
+        <translation>View/choose the camera, turn it on or off</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/TopStatusBar.cpp" line="35"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="136"/>
         <source>-- ips</source>
         <translation>-- fps</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="52"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="45"/>
         <source>Choisir la résolution de la caméra</source>
         <translation>Choose the camera resolution</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="62"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="55"/>
         <source>Voir les caractéristiques du microscope</source>
         <translation>View microscope specs</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="65"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="58"/>
         <location filename="../src/ui/TopStatusBar.cpp" line="223"/>
         <source>Se connecter</source>
         <translation>Log in</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="68"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="61"/>
         <source>Choisir ta classe et ton groupe</source>
         <translation>Choose your class and group</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="76"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="69"/>
         <source>Réglages</source>
         <translation>Settings</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="82"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="75"/>
         <source>Aide</source>
         <translation>Help</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="91"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="84"/>
         <source>Quitter</source>
         <translation>Quit</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="145"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="148"/>
+        <source>⏻ Caméra éteinte</source>
+        <translation>⏻ Camera off</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/TopStatusBar.cpp" line="151"/>
         <source>● Caméra connectée</source>
         <translation>● Camera connected</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="146"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="152"/>
         <source>● Caméra connectée (%1)</source>
         <translation>● Camera connected (%1)</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="160"/>
+        <location filename="../src/ui/TopStatusBar.cpp" line="163"/>
         <source>%1 ips</source>
         <translation>%1 fps</translation>
     </message>
     <message>
-        <location filename="../src/ui/TopStatusBar.cpp" line="175"/>
         <source>Allumer la caméra</source>
-        <translation>Turn on the camera</translation>
+        <translation type="vanished">Turn on the camera</translation>
     </message>
     <message>
         <location filename="../src/ui/TopStatusBar.cpp" line="226"/>

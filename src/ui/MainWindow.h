@@ -78,6 +78,13 @@ private:
     // startResolutionAutoTuning() and silently overriding their choice.
     bool m_userChoseResolution = false;
     QSize m_userChosenResolution;
+    // Auto-tuning cycles setResolution() through several candidates right
+    // after connect (see startResolutionAutoTuning) — reconfiguring a
+    // DirectShow graph's format repeatedly in quick succession right after
+    // opening it turned out to be unstable on some drivers (crashes on
+    // camera select). Only ever run it once per app session; later
+    // reconnects just keep whatever resolution the camera opens with.
+    bool m_autoTuningDoneOnce = false;
     double m_smoothedFocusScore = 0.0;
     double m_lastReportedFps = 0.0;
     QVector<QSize> m_resolutionProbeCandidates;

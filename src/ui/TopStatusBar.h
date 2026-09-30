@@ -36,9 +36,10 @@ public slots:
     void setGroupButtonVisible(bool visible);
     void setTeacherButtonToolTip(const QString &tip);
 
-    // Updates the power button's icon/color/tooltip. Driven by
-    // CameraManager::poweredOnChanged (via MainWindow), not by the button's
-    // own click — the actual on/off state lives in CameraManager.
+    // Merged into the connection button itself (see refreshConnectionDisplay)
+    // rather than a separate icon: green/red now reflects power state, not
+    // connection state — clicking the button (connectionClicked) opens the
+    // same device-picker menu that also has the actual on/off action.
     void setCameraPoweredIndicator(bool on);
 
     // Extra left margin, in pixels, added on top of the normal content
@@ -65,13 +66,13 @@ signals:
     void resolutionClicked();
     void connectionClicked();
     void helpRequested();
-    void powerToggleRequested();
     void quitRequested();
 
 private:
+    void refreshConnectionDisplay();
+
     QLabel *m_logoLabel;
     QPushButton *m_connectionButton;
-    QPushButton *m_powerButton;
     QPushButton *m_microscopeLabel;
     QPushButton *m_groupButton;
     QLabel *m_fpsLabel;
@@ -81,4 +82,8 @@ private:
     QPushButton *m_quitButton;
     QGridLayout *m_layout;
     int m_baseLeftMargin = 16;
+
+    bool m_isConnected = false;
+    bool m_isPoweredOn = true;
+    QString m_lastModelName;
 };

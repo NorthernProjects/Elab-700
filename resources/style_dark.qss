@@ -90,39 +90,6 @@ QMainWindow, QDialog {
     font-weight: bold;
 }
 
-#powerButton {
-    background-color: transparent;
-    border: 1px solid #22384d;
-    border-radius: 14px;
-    font-size: 13px;
-    color: #4d6a82;
-}
-
-#powerButton:hover {
-    background-color: #16202c;
-    border-color: #5ce1e6;
-}
-
-#powerButton[poweredOn="true"] {
-    background-color: #1f6b46;
-    color: #ffffff;
-    border-color: #35e08a;
-}
-
-#powerButton[poweredOn="true"]:hover {
-    background-color: #237a51;
-}
-
-#powerButton[poweredOn="false"] {
-    background-color: #6b2027;
-    color: #ffffff;
-    border-color: #ff5c6c;
-}
-
-#powerButton[poweredOn="false"]:hover {
-    background-color: #7d2530;
-}
-
 #microscopeLabel {
     background: transparent;
     border: none;
