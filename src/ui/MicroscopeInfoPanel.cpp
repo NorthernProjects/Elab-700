@@ -6,18 +6,11 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-#include "GlossaryDialog.h"
-#include "MicroscopeDiagramDialog.h"
-
 MicroscopeInfoPanel::MicroscopeInfoPanel(QWidget *parent) : QWidget(parent)
 {
     setObjectName("microscopeInfoPanel");
     setAttribute(Qt::WA_StyledBackground, true);
-    // Not setFixedWidth(): MainWindow now hosts this panel inside an
-    // animated container that shrinks it down to collapse it, which needs
-    // the panel itself free to be resized smaller than its natural width.
-    setMinimumWidth(0);
-    setMaximumWidth(300);
+    setFixedWidth(300);
 
     auto *shadow = new QGraphicsDropShadowEffect(this);
     shadow->setBlurRadius(28);
@@ -32,14 +25,13 @@ MicroscopeInfoPanel::MicroscopeInfoPanel(QWidget *parent) : QWidget(parent)
     auto *headerRow = new QHBoxLayout();
     m_titleLabel = new QLabel(tr("Microscope"), this);
     m_titleLabel->setObjectName("microscopeInfoTitle");
-    auto *minimizeButton = new QPushButton(QStringLiteral("−"), this);
-    minimizeButton->setObjectName("microscopeInfoClose");
-    minimizeButton->setToolTip(tr("Réduire"));
-    minimizeButton->setFixedSize(24, 24);
-    minimizeButton->setCursor(Qt::PointingHandCursor);
+    auto *closeButton = new QPushButton(QStringLiteral("✕"), this);
+    closeButton->setObjectName("microscopeInfoClose");
+    closeButton->setFixedSize(24, 24);
+    closeButton->setCursor(Qt::PointingHandCursor);
     headerRow->addWidget(m_titleLabel);
     headerRow->addStretch(1);
-    headerRow->addWidget(minimizeButton);
+    headerRow->addWidget(closeButton);
     layout->addLayout(headerRow);
 
     // The user's microscope is whatever they own — no hardcoded spec sheet.
@@ -68,33 +60,7 @@ MicroscopeInfoPanel::MicroscopeInfoPanel(QWidget *parent) : QWidget(parent)
     addRow(tr("Résolution"), m_resolutionValue);
     addRow(tr("Images/seconde"), m_fpsValue);
 
-    connect(minimizeButton, &QPushButton::clicked, this, &MicroscopeInfoPanel::minimizeRequested);
-
-    // Learning aids (diagram + glossary): shown or hidden at runtime from
-    // the "learning aids" feature flag — on for the school and grand-public
-    // editions, off by default for the lab edition, always re-toggleable.
-    m_diagramButton = new QPushButton(tr("Voir le schéma du microscope"), this);
-    m_diagramButton->setCursor(Qt::PointingHandCursor);
-    layout->addWidget(m_diagramButton);
-
-    m_glossaryButton = new QPushButton(tr("Voir le glossaire"), this);
-    m_glossaryButton->setCursor(Qt::PointingHandCursor);
-    layout->addWidget(m_glossaryButton);
-
-    connect(m_diagramButton, &QPushButton::clicked, this, [this]() {
-        MicroscopeDiagramDialog dialog(this);
-        dialog.exec();
-    });
-    connect(m_glossaryButton, &QPushButton::clicked, this, [this]() {
-        GlossaryDialog dialog(this);
-        dialog.exec();
-    });
-}
-
-void MicroscopeInfoPanel::setLearningAidsVisible(bool visible)
-{
-    m_diagramButton->setVisible(visible);
-    m_glossaryButton->setVisible(visible);
+    connect(closeButton, &QPushButton::clicked, this, &MicroscopeInfoPanel::closeRequested);
 }
 
 void MicroscopeInfoPanel::setMicroscopeName(const QString &name)

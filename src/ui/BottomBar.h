@@ -18,6 +18,9 @@ public:
 public slots:
     void setZoomPercent(int percent);
 
+    // Schéma/Glossaire buttons, driven by the learning-aids feature flag.
+    void setLearningAidsVisible(bool visible);
+
 signals:
     void photoRequested();
     void videoToggleRequested();
@@ -29,6 +32,8 @@ signals:
     void zoomResetRequested();
     // Opens the counting/measuring analysis tools (common to all editions).
     void analysisRequested();
+    void diagramRequested();
+    void glossaryRequested();
 
 private:
     QPushButton *m_photoButton;
@@ -39,4 +44,6 @@ private:
     QPushButton *m_zoomOutButton;
     QPushButton *m_zoomInButton;
     QPushButton *m_zoomLabel;
+    QPushButton *m_diagramButton;
+    QPushButton *m_glossaryButton;
 };

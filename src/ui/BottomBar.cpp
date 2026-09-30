@@ -33,6 +33,14 @@ QPushButton *makeZoomButton(const QString &text, const QString &objectName)
     return button;
 }
 
+QPushButton *makeSecondaryButton(const QString &text)
+{
+    auto *button = new QPushButton(text);
+    button->setFixedHeight(44);
+    button->setCursor(Qt::PointingHandCursor);
+    return button;
+}
+
 } // namespace
 
 BottomBar::BottomBar(QWidget *parent) : QWidget(parent)
@@ -85,15 +93,26 @@ BottomBar::BottomBar(QWidget *parent) : QWidget(parent)
     buttonsLayout->addWidget(m_galleryButton);
     buttonsLayout->addWidget(m_fullscreenButton);
 
+    // Bottom-right, next to Plein écran — the diagram/glossary learning
+    // aids, in the column that used to just mirror the left zoom column's
+    // stretch for centering purposes.
+    m_diagramButton = makeSecondaryButton(tr("🔬 Schéma"));
+    m_glossaryButton = makeSecondaryButton(tr("📖 Glossaire"));
+    auto *learningAidsContainer = new QWidget(this);
+    auto *learningAidsLayout = new QHBoxLayout(learningAidsContainer);
+    learningAidsLayout->setContentsMargins(0, 0, 0, 0);
+    learningAidsLayout->setSpacing(8);
+    learningAidsLayout->addWidget(m_diagramButton);
+    learningAidsLayout->addWidget(m_glossaryButton);
+
     auto *layout = new QGridLayout(this);
     layout->setContentsMargins(24, 16, 24, 16);
     layout->setColumnStretch(0, 1);
     layout->setColumnStretch(1, 0);
     layout->setColumnStretch(2, 1);
     layout->addWidget(zoomContainer, 0, 0, Qt::AlignLeft | Qt::AlignVCenter);
-    // Column 2 has no content but keeps the same stretch as column 0 so
-    // column 1 (the main buttons) still lands exactly in the middle.
     layout->addWidget(buttonsContainer, 0, 1, Qt::AlignCenter);
+    layout->addWidget(learningAidsContainer, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
 
     connect(m_photoButton, &QPushButton::clicked, this, &BottomBar::photoRequested);
     connect(m_videoButton, &QPushButton::clicked, this, &BottomBar::videoToggleRequested);
@@ -103,11 +122,19 @@ BottomBar::BottomBar(QWidget *parent) : QWidget(parent)
     connect(m_zoomOutButton, &QPushButton::clicked, this, &BottomBar::zoomOutRequested);
     connect(m_zoomInButton, &QPushButton::clicked, this, &BottomBar::zoomInRequested);
     connect(m_zoomLabel, &QPushButton::clicked, this, &BottomBar::zoomResetRequested);
+    connect(m_diagramButton, &QPushButton::clicked, this, &BottomBar::diagramRequested);
+    connect(m_glossaryButton, &QPushButton::clicked, this, &BottomBar::glossaryRequested);
 }
 
 void BottomBar::setZoomPercent(int percent)
 {
     m_zoomLabel->setText(QStringLiteral("%1%").arg(percent));
+}
+
+void BottomBar::setLearningAidsVisible(bool visible)
+{
+    m_diagramButton->setVisible(visible);
+    m_glossaryButton->setVisible(visible);
 }
 
 void BottomBar::setRecording(bool recording)

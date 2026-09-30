@@ -25,21 +25,12 @@ public slots:
     // ("Microscope" while unset).
     void setMicroscopeName(const QString &name);
 
-    // Diagram + glossary buttons, driven by the learning-aids feature flag.
-    void setLearningAidsVisible(bool visible);
-
 signals:
-    // The panel's own "−" button — collapses it (MainWindow animates the
-    // side panel away). Named for what it does, not for hiding/closing:
-    // the panel stays reachable via the top-bar microscope button, it just
-    // slides out of the way.
-    void minimizeRequested();
+    void closeRequested();
 
 private:
     QLabel *m_titleLabel;
     QLabel *m_resolutionValue;
     QLabel *m_fpsValue;
     QLabel *m_connectionValue;
-    QPushButton *m_diagramButton;
-    QPushButton *m_glossaryButton;
 };
