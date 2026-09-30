@@ -60,7 +60,13 @@ QVector<CameraDeviceInfo> CameraManager::microscopeDevices() const
 
 void CameraManager::rescan()
 {
-    if (m_backend->isOpen() || m_probeInFlight)
+    // m_manuallyDisconnected (= powered off) must stop this cold: probing
+    // briefly opens every candidate device index (see probeDevices()), so
+    // without this check the "off" camera was still getting opened/closed
+    // every 2 seconds by the periodic rescan timer even while switched off
+    // — not the real, hands-off "leave the camera alone" state a power
+    // button should provide.
+    if (m_backend->isOpen() || m_probeInFlight || m_manuallyDisconnected)
         return;
 
     // Probing several capture indices runs entirely on a worker thread

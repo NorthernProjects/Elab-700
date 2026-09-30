@@ -1169,73 +1169,86 @@ Stop</translation>
         <translation>The camera did not accept this resolution (staying at %1 x %2).</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="659"/>
+        <location filename="../src/ui/MainWindow.cpp" line="668"/>
+        <source>Caméra allumée (cliquer pour éteindre)</source>
+        <translation>Camera on (click to turn off)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="669"/>
+        <source>Caméra éteinte (cliquer pour allumer)</source>
+        <translation>Camera off (click to turn on)</translation>
+    </message>
+    <message>
         <source>Caméra allumée</source>
-        <translation>Camera on</translation>
+        <translation type="vanished">Camera on</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="659"/>
         <source>Caméra éteinte</source>
-        <translation>Camera off</translation>
+        <translation type="vanished">Camera off</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="664"/>
+        <location filename="../src/ui/MainWindow.cpp" line="676"/>
         <source>Déconnecter la caméra</source>
         <translation>Disconnect the camera</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="667"/>
+        <location filename="../src/ui/MainWindow.cpp" line="679"/>
         <source>Caméra déconnectée.</source>
         <translation>Camera disconnected.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="673"/>
+        <location filename="../src/ui/MainWindow.cpp" line="685"/>
         <source>Aucune caméra détectée</source>
         <translation>No camera detected</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="685"/>
+        <location filename="../src/ui/MainWindow.cpp" line="689"/>
+        <source>Aucune caméra ne ressemble au microscope — tout est affiché</source>
+        <translation>No camera looks like the microscope — showing everything</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="701"/>
         <source>Impossible de se connecter à %1.</source>
         <translation>Could not connect to %1.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="716"/>
+        <location filename="../src/ui/MainWindow.cpp" line="732"/>
         <source>Renommer la photo</source>
         <translation>Rename photo</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="717"/>
+        <location filename="../src/ui/MainWindow.cpp" line="733"/>
         <source>Nom du fichier :</source>
         <translation>File name:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="727"/>
-        <location filename="../src/ui/MainWindow.cpp" line="734"/>
+        <location filename="../src/ui/MainWindow.cpp" line="743"/>
+        <location filename="../src/ui/MainWindow.cpp" line="750"/>
         <source>Renommer</source>
         <translation>Rename</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="727"/>
+        <location filename="../src/ui/MainWindow.cpp" line="743"/>
         <source>Un fichier porte déjà ce nom.</source>
         <translation>A file with this name already exists.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="734"/>
+        <location filename="../src/ui/MainWindow.cpp" line="750"/>
         <source>Impossible de renommer le fichier.</source>
         <translation>Could not rename the file.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="844"/>
+        <location filename="../src/ui/MainWindow.cpp" line="860"/>
         <source>E-Lab700_Sauvegarde_%1</source>
         <translation>E-Lab700_Backup_%1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="848"/>
+        <location filename="../src/ui/MainWindow.cpp" line="864"/>
         <source>Sauvegarde automatique effectuée.</source>
         <translation>Automatic backup completed.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="860"/>
+        <location filename="../src/ui/MainWindow.cpp" line="876"/>
         <source>Minuteur terminé !</source>
         <translation>Timer finished!</translation>
     </message>

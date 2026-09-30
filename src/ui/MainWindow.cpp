@@ -644,20 +644,32 @@ QIcon coloredDotIcon(const QColor &color)
 
 void MainWindow::onConnectionClicked()
 {
-    // Only devices that look like the microscope (see CameraManager::
-    // microscopeDevices) — never the laptop's own webcam, which a student
-    // could otherwise pick by mistake and get confused by.
-    const QVector<CameraDeviceInfo> devices = m_cameraManager.microscopeDevices();
+    // Prefer devices that look like the microscope (see CameraManager::
+    // microscopeDevices) so the laptop's own webcam isn't offered as a
+    // choice — but if that filter leaves nothing (e.g. the microscope
+    // briefly negotiated a lower resolution during the probe than its true
+    // native one) fall back to every detected device rather than block
+    // manual selection entirely, which used to be the only way to recover
+    // when auto-detection guessed wrong.
+    QVector<CameraDeviceInfo> devices = m_cameraManager.microscopeDevices();
+    const bool showingAllDevices = devices.isEmpty() && !m_cameraManager.lastKnownDevices().isEmpty();
+    if (showingAllDevices)
+        devices = m_cameraManager.lastKnownDevices();
+
     QMenu menu(this);
 
-    // Mirrors the top-bar power button's own red/green state right here,
-    // so it's obvious from this menu alone why nothing is connected when
-    // the camera was deliberately turned off (rather than just a disconnect
-    // or missing driver).
+    // Right at the top, next to the camera's own name/status — click to
+    // turn it on or off. This is the one control that actually stops the
+    // camera being touched at all (see setPoweredOn/rescan), not just a
+    // "disconnect" that leaves it idling: turning it off is meant to spare
+    // the camera from being probed/opened needlessly when nobody's using it.
     const bool poweredOn = m_cameraManager.isPoweredOn();
-    QAction *powerNotice = menu.addAction(coloredDotIcon(poweredOn ? QColor("#35e08a") : QColor("#ff5c6c")),
-                                           poweredOn ? tr("Caméra allumée") : tr("Caméra éteinte"));
-    powerNotice->setEnabled(false);
+    QAction *powerAction = menu.addAction(coloredDotIcon(poweredOn ? QColor("#35e08a") : QColor("#ff5c6c")),
+                                           poweredOn ? tr("Caméra allumée (cliquer pour éteindre)")
+                                                     : tr("Caméra éteinte (cliquer pour allumer)"));
+    connect(powerAction, &QAction::triggered, this, [this]() {
+        m_cameraManager.setPoweredOn(!m_cameraManager.isPoweredOn());
+    });
     menu.addSeparator();
 
     if (m_cameraManager.isConnected()) {
@@ -673,6 +685,10 @@ void MainWindow::onConnectionClicked()
         QAction *none = menu.addAction(tr("Aucune caméra détectée"));
         none->setEnabled(false);
     } else {
+        if (showingAllDevices) {
+            QAction *note = menu.addAction(tr("Aucune caméra ne ressemble au microscope — tout est affiché"));
+            note->setEnabled(false);
+        }
         for (const CameraDeviceInfo &device : devices) {
             const bool isCurrent = m_cameraManager.isConnected() && device.id == m_cameraManager.currentDeviceId();
             QAction *action = menu.addAction(coloredDotIcon(isCurrent ? QColor("#35e08a") : QColor("#ff5c6c")),
