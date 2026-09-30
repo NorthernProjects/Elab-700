@@ -103,17 +103,17 @@ bool UvcCameraBackend::openCaptureAt(int index, const QSize &size)
     // setGain() afterwards.
     capture->set(cv::CAP_PROP_GAIN, 35);
 
-    // Disable the driver's own auto-exposure/auto-WB instead of leaving it
-    // running by default: those commonly "hunt" (continuously nudge
-    // exposure/color trying to converge), which reads as a visibly
-    // flickering/wavering image. Deliberately not also forcing a specific
-    // CAP_PROP_EXPOSURE value here — that number's valid range/scale is
-    // driver-specific and a wrong one can itself cause instability; manual
-    // mode simply keeps whatever exposure the driver already had. Auto mode
-    // is still one tap away (teacher panel) for whoever wants it.
-    capture->set(cv::CAP_PROP_AUTO_EXPOSURE, 0.25); // 0.25 = manual on this backend's convention
-    capture->set(cv::CAP_PROP_AUTO_WB, 0);
-
+    // Deliberately NOT touching auto-exposure/auto-WB here. This backend
+    // previously forced them off at connect time to fight image flicker,
+    // but CAP_PROP_AUTO_EXPOSURE's manual-vs-auto convention (which numeric
+    // value means what) is driver-specific and guessing it wrong is worse
+    // than doing nothing: on this camera it left auto-exposure actually
+    // still running, silently overriding the teacher panel's manual
+    // exposure slider and producing a stuck, overexposed image with no way
+    // to correct it. The teacher panel's own "Exposition automatique" /
+    // "Balance des blancs automatique" checkboxes (setAutoExposure(),
+    // setAutoWhiteBalance()) are the reliable way to control this — the
+    // camera simply starts up in whatever mode it defaults to.
     m_capture.reset(capture.take());
     m_openIndex = index;
     return true;
@@ -244,29 +244,19 @@ bool UvcCameraBackend::setResolution(const QSize &size)
     if (!isOpen())
         return false;
 
-    // Calling set() on an already-open, actively-streaming DirectShow
-    // capture is unreliable for frame size specifically — several drivers
-    // (this one included, per real-world testing) silently ignore a
-    // mid-stream FRAME_WIDTH/HEIGHT change instead of renegotiating, which
-    // is why picking a resolution from the menu appeared to do nothing.
-    // Reopening the device with the new size requested before the first
-    // read (openCaptureAt(), the same sequence open() uses) gives the
-    // driver a real chance to apply it.
-    m_captureTimer.stop();
-    const int index = m_openIndex;
-
-    if (!openCaptureAt(index, size)) {
-        // Reopening failed outright (device briefly busy/unplugged) — treat
-        // this as a full disconnect rather than leaving the backend in a
-        // half-open state with a dead capture object.
-        m_capture.reset();
-        m_openIndex = -1;
-        emit deviceDisconnected();
-        return false;
-    }
-
-    m_lastGoodFrameClock.start();
-    m_captureTimer.start(kCaptureIntervalMs);
+    // A previous version of this function reopened the capture (closing it
+    // and creating a fresh cv::VideoCapture at the same index) to work
+    // around drivers that ignore a mid-stream FRAME_WIDTH/HEIGHT change.
+    // That backfired badly: re-opening by index right after closing isn't
+    // guaranteed to bind to the same physical device while Windows/
+    // DirectShow settles, and it was observed connecting to the computer's
+    // own built-in webcam instead of the microscope. Silently picking the
+    // wrong camera is far worse than a resolution request being ignored, so
+    // this stays a plain property set on the already-open capture — some
+    // resolutions may not take effect on every driver, but the connected
+    // device never changes underneath the user.
+    m_capture->set(cv::CAP_PROP_FRAME_WIDTH, size.width());
+    m_capture->set(cv::CAP_PROP_FRAME_HEIGHT, size.height());
     return true;
 }
 
