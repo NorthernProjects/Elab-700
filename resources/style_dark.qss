@@ -1,7 +1,11 @@
-/* E-Lab 700 — dark, futuristic theme tuned for touch and classroom use */
+/* E-Lab 700 — dark theme: calm, uncluttered, generous rounding and spacing
+   in the spirit of macOS System Settings rather than a dense technical
+   panel. Segoe UI Variable (Windows 11's native UI font) is tried first —
+   it reads closer to San Francisco than plain Segoe UI — with graceful
+   fallbacks for Windows 7/10. */
 
 * {
-    font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+    font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", sans-serif;
     color: #e6f7ff;
 }
 
@@ -18,12 +22,12 @@ QMainWindow, QDialog {
 #microscopeInfoPanel {
     background-color: #0e1622;
     border: 1px solid #22384d;
-    border-radius: 14px;
+    border-radius: 16px;
 }
 
 #microscopeInfoTitle {
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 600;
     color: #5ce1e6;
 }
 
@@ -33,8 +37,11 @@ QMainWindow, QDialog {
 }
 
 #microscopeInfoSection {
-    font-size: 12px;
-    color: #b7d4e8;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b95b3;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 #microscopeInfoLabel {
@@ -44,7 +51,7 @@ QMainWindow, QDialog {
 
 #microscopeInfoValue {
     font-size: 12px;
-    font-weight: bold;
+    font-weight: 600;
     color: #e6f7ff;
 }
 
@@ -71,8 +78,8 @@ QMainWindow, QDialog {
 #connectionLabel {
     background: transparent;
     border: none;
-    padding: 2px 6px;
-    border-radius: 8px;
+    padding: 4px 10px;
+    border-radius: 10px;
     font-size: 13px;
 }
 
@@ -82,22 +89,22 @@ QMainWindow, QDialog {
 
 #connectionLabel[connected="true"] {
     color: #35e08a;
-    font-weight: bold;
+    font-weight: 600;
 }
 
 #connectionLabel[connected="false"] {
     color: #ff5c6c;
-    font-weight: bold;
+    font-weight: 600;
 }
 
 #microscopeLabel {
     background: transparent;
     border: none;
-    padding: 4px 10px;
+    padding: 4px 12px;
     border-radius: 10px;
     color: #4d6a82;
     font-size: 12px;
-    font-weight: bold;
+    font-weight: 600;
     letter-spacing: 1px;
 }
 
@@ -109,8 +116,8 @@ QMainWindow, QDialog {
 #resolutionLabel {
     background: transparent;
     border: none;
-    padding: 2px 6px;
-    border-radius: 8px;
+    padding: 4px 8px;
+    border-radius: 10px;
     font-size: 13px;
     color: #8fb8d6;
 }
@@ -123,10 +130,10 @@ QMainWindow, QDialog {
 #groupButton {
     background: transparent;
     border: 1px solid #22384d;
-    border-radius: 14px;
-    padding: 4px 14px;
+    border-radius: 16px;
+    padding: 4px 16px;
     color: #5ce1e6;
-    font-weight: bold;
+    font-weight: 600;
     font-size: 13px;
 }
 
@@ -173,8 +180,8 @@ QPushButton {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
         stop:0 #182636, stop:1 #101a26);
     border: 1px solid #274363;
-    border-radius: 14px;
-    padding: 6px;
+    border-radius: 16px;
+    padding: 7px 10px;
 }
 
 QPushButton:hover {
@@ -204,7 +211,7 @@ QPushButton:pressed {
 #zoomLabel {
     background: transparent;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 13px;
     color: #8fb8d6;
 }
@@ -214,19 +221,28 @@ QPushButton:pressed {
     color: #5ce1e6;
 }
 
+/* Grouped "card" sections, closer to macOS System Settings than a plain
+   bordered technical box: a soft-tinted fill instead of just an outline,
+   generous rounding, and a small-caps muted title sitting slightly proud
+   of the card rather than embedded in its border. */
 QGroupBox {
-    border: 1px solid #22384d;
-    border-radius: 10px;
-    margin-top: 12px;
-    padding-top: 12px;
-    font-weight: bold;
-    color: #5ce1e6;
+    background-color: #0b111a;
+    border: 1px solid #1c2e40;
+    border-radius: 16px;
+    margin-top: 18px;
+    padding: 18px 16px 16px 16px;
+    font-weight: 600;
+    font-size: 12px;
+    color: #6ee3e8;
 }
 
 QGroupBox::title {
     subcontrol-origin: margin;
-    left: 12px;
+    subcontrol-position: top left;
+    left: 14px;
+    top: 2px;
     padding: 0 6px;
+    letter-spacing: 0.5px;
 }
 
 QSlider::groove:horizontal {
@@ -253,14 +269,23 @@ QSlider::handle:horizontal {
 QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox {
     background-color: #0a0f18;
     border: 1px solid #22384d;
-    border-radius: 6px;
-    padding: 4px 8px;
+    border-radius: 9px;
+    padding: 5px 10px;
     color: #e6f7ff;
     selection-background-color: #2a5570;
 }
 
+QComboBox:hover, QLineEdit:hover, QSpinBox:hover, QDoubleSpinBox:hover {
+    border-color: #35526e;
+}
+
 QComboBox:focus, QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
     border-color: #5ce1e6;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 22px;
 }
 
 /* Explicit sizing for the up/down arrows: once any QSS applies to a
@@ -274,22 +299,25 @@ QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
 }
 
 QComboBox QAbstractItemView {
-    background-color: #0a0f18;
+    background-color: #0e1622;
     border: 1px solid #22384d;
+    border-radius: 10px;
     color: #e6f7ff;
-    selection-background-color: #2a5570;
+    selection-background-color: #1c3a4a;
+    padding: 4px;
 }
 
 QMenu {
     background-color: #0e1622;
     border: 1px solid #22384d;
+    border-radius: 12px;
     color: #e6f7ff;
-    padding: 4px;
+    padding: 6px;
 }
 
 QMenu::item {
-    padding: 6px 24px 6px 12px;
-    border-radius: 4px;
+    padding: 7px 26px 7px 14px;
+    border-radius: 8px;
     color: #e6f7ff;
 }
 
@@ -305,23 +333,48 @@ QMenu::item:disabled {
 QMenu::separator {
     height: 1px;
     background: #22384d;
-    margin: 4px 8px;
+    margin: 6px 10px;
+}
+
+QCheckBox {
+    spacing: 10px;
 }
 
 QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
+    border: 1.5px solid #35526e;
+    border-radius: 6px;
+    background-color: #0a0f18;
+}
+
+QCheckBox::indicator:hover {
+    border-color: #5ce1e6;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #35e0e6;
+    border-color: #35e0e6;
+}
+
+QLabel {
+    color: #cfe6f2;
 }
 
 QListWidget {
     background-color: #0a0f18;
     border: 1px solid #22384d;
+    border-radius: 12px;
+}
+
+QListWidget::item {
+    padding: 4px;
     border-radius: 8px;
 }
 
 QListWidget::item:selected {
     background-color: #1c3a4a;
-    border-radius: 6px;
+    border-radius: 8px;
 }
 
 QScrollArea {

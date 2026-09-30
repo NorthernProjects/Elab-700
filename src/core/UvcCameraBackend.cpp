@@ -115,6 +115,16 @@ bool UvcCameraBackend::open(const QString &deviceId)
     // setGain() afterwards.
     capture->set(cv::CAP_PROP_GAIN, 35);
 
+    // Force manual exposure/white balance with fixed starting values instead
+    // of leaving the driver's own auto-exposure/auto-WB running by default:
+    // those commonly "hunt" (continuously nudge exposure/color up and down
+    // trying to converge), which reads as a visibly flickering/wavering
+    // image — exactly what a live classroom view must never do. Auto mode
+    // is still one tap away (teacher panel), for whoever wants it.
+    capture->set(cv::CAP_PROP_AUTO_EXPOSURE, 0.25); // 0.25 = manual on this backend's convention
+    capture->set(cv::CAP_PROP_EXPOSURE, 50);
+    capture->set(cv::CAP_PROP_AUTO_WB, 0);
+
     m_capture.reset(capture.take());
     m_openIndex = index;
     m_frameCountSinceFpsUpdate = 0;

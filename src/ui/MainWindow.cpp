@@ -102,7 +102,13 @@ double computeSharpnessScore(const QImage &image)
 
     const double mean = sum / count;
     const double variance = (sumSq / count) - (mean * mean);
-    return qBound(0.0, std::sqrt(qMax(0.0, variance)) * 2.0, 100.0);
+    // The multiplier (raw Laplacian variance is naturally small) was
+    // originally tuned against typical low-magnification views; high-power
+    // objectives tend to fill the frame with smoother, lower-contrast
+    // detail even in sharp focus, which under-scored as "blurry" on the
+    // same scale. Bumped up so genuinely sharp frames read as sharp across
+    // objectives — this stays a rough visual aid, not a precise measurement.
+    return qBound(0.0, std::sqrt(qMax(0.0, variance)) * 4.0, 100.0);
 }
 
 QString sanitizeForFileName(const QString &name)

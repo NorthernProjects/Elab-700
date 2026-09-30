@@ -6,14 +6,16 @@
 #include "UvcCameraBackend.h"
 
 namespace {
-// The OMAX 83S sensor negotiates ~2592x1944 (5MP, area ~5.0M); a laptop's
-// built-in webcam tops out around 1920x1080 (2MP, area ~2.1M) even on
-// higher-end machines. This floor sits comfortably between the two so
-// auto-connect can never silently pick the laptop's own camera just
-// because it's the only thing detected — it shows "no camera detected"
-// instead and waits for a manual pick (see forceConnect) or the real
-// microscope to appear.
-constexpr long kMinMicroscopeArea = 3000000;
+// The OMAX 83S can negotiate as high as ~2592x1944 (5MP) but in practice
+// often reports a much lower resolution during the quick probe (real-world
+// testing found it landing on 640x480/VGA, area ~307k) — driver/timing
+// dependent, not something this app controls. The floor is set just under
+// that, low enough to still recognize it reliably. This does mean a
+// laptop's own low-res webcam could also pass on a machine that has one;
+// this app's primary classroom setup (a desktop with only the microscope's
+// camera attached) doesn't hit that case, and the device picker still lets
+// a teacher manually override if it ever does.
+constexpr long kMinMicroscopeArea = 300000;
 
 bool looksLikeMicroscope(const CameraDeviceInfo &device)
 {
