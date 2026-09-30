@@ -16,6 +16,7 @@ class IdleScreen;
 class MicroscopeInfoPanel;
 class TopStatusBar;
 class VideoView;
+class QParallelAnimationGroup;
 
 // Student-facing main window: nearly full-screen video, a bottom action bar,
 // a slim top status strip, and a discreet gear button that opens the
@@ -60,7 +61,11 @@ private slots:
 private:
     bool confirmTeacherPin();
     void restartIdleTimer();
-    void positionMicroscopeInfoPanel();
+    // Animates the side panel's width (and fade) between its full width and
+    // 0 — collapsing it out of the way or bringing it back. animate=false
+    // jumps straight to the target state (used for immersive mode, which is
+    // an instant full-screen switch, not a user-initiated collapse/expand).
+    void setMicroscopeInfoPanelCollapsed(bool collapsed, bool animate = true);
     void promptRenamePhoto(const QString &path);
     void setImmersiveMode(bool immersive);
     void updateTimeLapseTimer();
@@ -103,4 +108,12 @@ private:
     BottomBar *m_bottomBar;
     IdleScreen *m_idleScreen;
     MicroscopeInfoPanel *m_microscopeInfoPanel;
+    // Real layout sibling of m_videoView (not a floating overlay) so the
+    // panel sits beside the video instead of on top of it — see
+    // setMicroscopeInfoPanelCollapsed().
+    QWidget *m_microscopeInfoContainer;
+    QParallelAnimationGroup *m_microscopeInfoAnim = nullptr;
+    bool m_microscopeInfoCollapsed = false;
+    bool m_microscopeInfoCollapsedBeforeImmersive = false;
+    int m_microscopeInfoExpandedWidth = 0;
 };

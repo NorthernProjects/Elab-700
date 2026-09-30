@@ -1,5 +1,7 @@
 #include "CameraManager.h"
 
+#include <limits>
+
 #include <QTimer>
 #include <QtConcurrent/QtConcurrentRun>
 
@@ -94,17 +96,23 @@ void CameraManager::onProbeFinished()
 
 void CameraManager::connectToBestCandidate()
 {
-    // Auto-connect only to whichever candidate looks like the microscope's
-    // high-res sensor, picking the largest if several qualify — never the
-    // laptop's own webcam just because it's the only thing present (see
-    // kMinMicroscopeArea). Anything that doesn't qualify is still listed in
+    // Auto-connect only to whichever candidate looks like the microscope,
+    // picking the SMALLEST qualifying resolution if several are present —
+    // never the laptop's own webcam just because it's also there (see
+    // kMinMicroscopeArea for the lower bound that excludes tiny/bogus
+    // readings). This is deliberately the opposite of "pick the biggest
+    // sensor": in practice the OMAX camera negotiates a small default probe
+    // resolution (640x480) while a laptop's built-in webcam commonly
+    // reports something larger (e.g. 1280x720) — picking the smallest
+    // qualifying candidate is what actually lands on the microscope on
+    // real hardware. Anything that doesn't qualify is still listed in
     // m_devices for manual selection (see forceConnect), just not opened
     // automatically.
     const CameraDeviceInfo *best = nullptr;
-    long bestArea = 0;
+    long bestArea = std::numeric_limits<long>::max();
     for (const CameraDeviceInfo &device : m_devices) {
         const long area = static_cast<long>(device.resolution.width()) * device.resolution.height();
-        if (looksLikeMicroscope(device) && area > bestArea) {
+        if (looksLikeMicroscope(device) && area < bestArea) {
             bestArea = area;
             best = &device;
         }

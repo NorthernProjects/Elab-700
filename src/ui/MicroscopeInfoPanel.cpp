@@ -13,7 +13,11 @@ MicroscopeInfoPanel::MicroscopeInfoPanel(QWidget *parent) : QWidget(parent)
 {
     setObjectName("microscopeInfoPanel");
     setAttribute(Qt::WA_StyledBackground, true);
-    setFixedWidth(300);
+    // Not setFixedWidth(): MainWindow now hosts this panel inside an
+    // animated container that shrinks it down to collapse it, which needs
+    // the panel itself free to be resized smaller than its natural width.
+    setMinimumWidth(0);
+    setMaximumWidth(300);
 
     auto *shadow = new QGraphicsDropShadowEffect(this);
     shadow->setBlurRadius(28);
@@ -28,13 +32,14 @@ MicroscopeInfoPanel::MicroscopeInfoPanel(QWidget *parent) : QWidget(parent)
     auto *headerRow = new QHBoxLayout();
     m_titleLabel = new QLabel(tr("Microscope"), this);
     m_titleLabel->setObjectName("microscopeInfoTitle");
-    auto *closeButton = new QPushButton(QStringLiteral("✕"), this);
-    closeButton->setObjectName("microscopeInfoClose");
-    closeButton->setFixedSize(24, 24);
-    closeButton->setCursor(Qt::PointingHandCursor);
+    auto *minimizeButton = new QPushButton(QStringLiteral("−"), this);
+    minimizeButton->setObjectName("microscopeInfoClose");
+    minimizeButton->setToolTip(tr("Réduire"));
+    minimizeButton->setFixedSize(24, 24);
+    minimizeButton->setCursor(Qt::PointingHandCursor);
     headerRow->addWidget(m_titleLabel);
     headerRow->addStretch(1);
-    headerRow->addWidget(closeButton);
+    headerRow->addWidget(minimizeButton);
     layout->addLayout(headerRow);
 
     // The user's microscope is whatever they own — no hardcoded spec sheet.
@@ -63,7 +68,7 @@ MicroscopeInfoPanel::MicroscopeInfoPanel(QWidget *parent) : QWidget(parent)
     addRow(tr("Résolution"), m_resolutionValue);
     addRow(tr("Images/seconde"), m_fpsValue);
 
-    connect(closeButton, &QPushButton::clicked, this, &MicroscopeInfoPanel::closeRequested);
+    connect(minimizeButton, &QPushButton::clicked, this, &MicroscopeInfoPanel::minimizeRequested);
 
     // Learning aids (diagram + glossary): shown or hidden at runtime from
     // the "learning aids" feature flag — on for the school and grand-public

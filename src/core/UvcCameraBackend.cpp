@@ -246,34 +246,32 @@ bool UvcCameraBackend::setResolution(const QSize &size)
     if (!isOpen())
         return false;
 
-    // A previous version of this function reopened the capture (closing it
-    // and creating a fresh cv::VideoCapture at the same index) to work
-    // around drivers that ignore a mid-stream FRAME_WIDTH/HEIGHT change.
-    // That backfired badly: re-opening by index right after closing isn't
-    // guaranteed to bind to the same physical device while Windows/
-    // DirectShow settles, and it was observed connecting to the computer's
-    // own built-in webcam instead of the microscope. Silently picking the
-    // wrong camera is far worse than a resolution request being ignored, so
-    // this stays a plain property set on the already-open capture — some
-    // resolutions may not take effect on every driver, but the connected
-    // device never changes underneath the user.
-    //
-    // Briefly pausing frame reads around the property change (rather than
-    // setting it while captureFrame() keeps reading concurrently) gives the
-    // DirectShow graph a quiet moment to renegotiate the format, which is a
-    // much lower-risk way to improve the odds of the change actually
-    // sticking than reopening the device.
-    const bool wasRunning = m_captureTimer.isActive();
-    if (wasRunning)
-        m_captureTimer.stop();
+    // A plain property set on the already-open capture (tried here
+    // before, even with frame reads paused around it) does not get this
+    // driver to actually renegotiate the frame size — confirmed by testing,
+    // it just silently keeps streaming at whatever resolution it already
+    // had. Reopening the device is the only thing that actually works, but
+    // an earlier attempt at that had a real bug: it constructed the new
+    // cv::VideoCapture BEFORE releasing the old one. With the old handle
+    // still holding the device, opening "the same index" again raced
+    // DirectShow's enumeration and could silently hand back a DIFFERENT
+    // physical camera (the computer's own webcam) instead of the
+    // microscope. Explicitly releasing first — so the device is actually
+    // free before reopening it at the new size — is the fix; the physical
+    // device index itself (m_openIndex) is unaffected by that release.
+    m_captureTimer.stop();
+    const int index = m_openIndex;
+    m_capture->release();
+    m_capture.reset();
 
-    m_capture->set(cv::CAP_PROP_FRAME_WIDTH, size.width());
-    m_capture->set(cv::CAP_PROP_FRAME_HEIGHT, size.height());
-
-    if (wasRunning) {
-        m_lastGoodFrameClock.start();
-        m_captureTimer.start(kCaptureIntervalMs);
+    if (!openCaptureAt(index, size)) {
+        m_openIndex = -1;
+        emit deviceDisconnected();
+        return false;
     }
+
+    m_lastGoodFrameClock.start();
+    m_captureTimer.start(kCaptureIntervalMs);
     return true;
 }
 

@@ -10,8 +10,10 @@
 #include <QCursor>
 #include <QDateTime>
 #include <QDir>
+#include <QEasingCurve>
 #include <QFile>
 #include <QFileInfo>
+#include <QHBoxLayout>
 #include <QIcon>
 #include <QInputDialog>
 #include <QKeyEvent>
@@ -19,7 +21,9 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
+#include <QParallelAnimationGroup>
 #include <QPixmap>
+#include <QPropertyAnimation>
 #include <QStatusBar>
 #include <QTextStream>
 #include <QVBoxLayout>
@@ -145,8 +149,42 @@ MainWindow::MainWindow(QWidget *parent)
     m_videoView = new VideoView(central);
     m_bottomBar = new BottomBar(central);
 
+    m_microscopeInfoPanel = new MicroscopeInfoPanel(central);
+
+    // A real layout sibling of the video (not a floating overlay positioned
+    // on top of it) so it takes up its own space beside the image instead
+    // of covering part of it. Wrapped in a container so its width can be
+    // animated down to 0 to collapse it — the panel's own drop shadow
+    // effect means it can't also carry the container's opacity fade, hence
+    // the separate widget.
+    m_microscopeInfoContainer = new QWidget(central);
+    m_microscopeInfoContainer->setObjectName("microscopeInfoContainer");
+    auto *infoContainerLayout = new QVBoxLayout(m_microscopeInfoContainer);
+    infoContainerLayout->setContentsMargins(16, 24, 24, 24);
+    infoContainerLayout->addWidget(m_microscopeInfoPanel);
+    infoContainerLayout->addStretch(1);
+
+    // No opacity effect on the container: nesting a QGraphicsEffect on this
+    // widget together with the panel's own drop-shadow effect (a second,
+    // separate QGraphicsEffect one level down) made the whole card render
+    // as blank/invisible — a real Qt limitation with nested graphics
+    // effects, not a sizing bug. The width animation alone (see
+    // setMicroscopeInfoPanelCollapsed) still reads as a clean slide.
+
+    // Expanded by default ("affiché tout le temps") — pin min==max to its
+    // natural content width so it starts fully shown, not mid-animation.
+    m_microscopeInfoExpandedWidth = m_microscopeInfoContainer->sizeHint().width();
+    m_microscopeInfoContainer->setMinimumWidth(m_microscopeInfoExpandedWidth);
+    m_microscopeInfoContainer->setMaximumWidth(m_microscopeInfoExpandedWidth);
+
+    auto *videoRow = new QHBoxLayout();
+    videoRow->setContentsMargins(0, 0, 0, 0);
+    videoRow->setSpacing(0);
+    videoRow->addWidget(m_videoView, 1);
+    videoRow->addWidget(m_microscopeInfoContainer, 0);
+
     layout->addWidget(m_topBar);
-    layout->addWidget(m_videoView, 1);
+    layout->addLayout(videoRow, 1);
     layout->addWidget(m_bottomBar);
 
 #if defined(Q_OS_MAC)
@@ -165,9 +203,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_idleScreen = new IdleScreen(this);
     m_idleScreen->hide();
-
-    m_microscopeInfoPanel = new MicroscopeInfoPanel(central);
-    m_microscopeInfoPanel->hide();
 
     // No hardcoded microscope model: the title comes from whatever the user
     // typed in the settings, live-updated.
@@ -302,7 +337,9 @@ MainWindow::MainWindow(QWidget *parent)
         HelpDialog dialog(this);
         dialog.exec();
     });
-    connect(m_microscopeInfoPanel, &MicroscopeInfoPanel::closeRequested, m_microscopeInfoPanel, &QWidget::hide);
+    connect(m_microscopeInfoPanel, &MicroscopeInfoPanel::minimizeRequested, this, [this]() {
+        setMicroscopeInfoPanelCollapsed(true);
+    });
     connect(m_topBar, &TopStatusBar::groupSelectionRequested, this, &MainWindow::onGroupSelectionRequested);
     connect(m_videoView, &VideoView::doubleClicked, this, &MainWindow::onVideoDoubleClicked);
     connect(m_videoView, &VideoView::gridToggleClicked, this, [this]() { m_settings.setShowGrid(!m_settings.showGrid()); });
@@ -476,8 +513,18 @@ void MainWindow::setImmersiveMode(bool immersive)
     m_topBar->setVisible(!immersive);
     m_bottomBar->setVisible(!immersive);
     m_videoView->setImmersive(immersive);
-    if (immersive && m_microscopeInfoPanel->isVisible())
-        m_microscopeInfoPanel->hide();
+    // Immersive/fullscreen is meant to be just the video, full stop — no
+    // side panel eating into it either way. Leaving immersive restores
+    // whichever expanded/collapsed state it was actually in beforehand
+    // (remembered separately so this doesn't clobber the user's own
+    // collapse/expand choice). Instant either way (animate=false): this is
+    // a mode switch, not a user-initiated collapse/expand.
+    if (immersive) {
+        m_microscopeInfoCollapsedBeforeImmersive = m_microscopeInfoCollapsed;
+        setMicroscopeInfoPanelCollapsed(true, false);
+    } else {
+        setMicroscopeInfoPanelCollapsed(m_microscopeInfoCollapsedBeforeImmersive, false);
+    }
 }
 
 bool MainWindow::confirmTeacherPin()
@@ -566,13 +613,7 @@ void MainWindow::onCameraDisconnected()
 
 void MainWindow::onMicroscopeInfoRequested()
 {
-    if (m_microscopeInfoPanel->isVisible()) {
-        m_microscopeInfoPanel->hide();
-        return;
-    }
-    positionMicroscopeInfoPanel();
-    m_microscopeInfoPanel->raise();
-    m_microscopeInfoPanel->show();
+    setMicroscopeInfoPanelCollapsed(!m_microscopeInfoCollapsed);
 }
 
 namespace {
@@ -734,22 +775,64 @@ void MainWindow::onConnectionClicked()
     menu.exec(QCursor::pos());
 }
 
-void MainWindow::positionMicroscopeInfoPanel()
+void MainWindow::setMicroscopeInfoPanelCollapsed(bool collapsed, bool animate)
 {
-    // The panel is a plain child widget, not managed by any layout of its
-    // own parent, so nothing ever resizes it to fit its content the way a
-    // layout-managed widget would — without this it kept whatever tiny
-    // default size it had at construction time, rendering as a near-empty
-    // sliver instead of the actual card.
-    m_microscopeInfoPanel->adjustSize();
+    if (m_microscopeInfoCollapsed == collapsed && !m_microscopeInfoAnim)
+        return;
+    m_microscopeInfoCollapsed = collapsed;
 
-    // Positioned as a small card next to the video image, near its top-right
-    // corner, rather than a modal dialog — so students can keep watching the
-    // live feed while reading the specs.
-    const QRect videoGeometry = m_videoView->geometry();
-    const int x = videoGeometry.right() - m_microscopeInfoPanel->width() - 24;
-    const int y = videoGeometry.top() + 24;
-    m_microscopeInfoPanel->move(std::max(videoGeometry.left() + 12, x), y);
+    const int targetWidth = collapsed ? 0 : m_microscopeInfoExpandedWidth;
+
+    // Any in-flight toggle loses — a fresh one always wins over whatever
+    // was still animating, instead of the two fighting over the same
+    // properties frame by frame.
+    if (m_microscopeInfoAnim) {
+        m_microscopeInfoAnim->stop();
+        m_microscopeInfoAnim->deleteLater();
+        m_microscopeInfoAnim = nullptr;
+    }
+
+    if (!animate) {
+        m_microscopeInfoContainer->setMinimumWidth(targetWidth);
+        m_microscopeInfoContainer->setMaximumWidth(targetWidth);
+        m_microscopeInfoContainer->setVisible(!collapsed);
+        return;
+    }
+
+    // Needs to stay visible for the shrink to actually be seen — only
+    // hidden once the group finishes (see below), and only when collapsing.
+    if (!collapsed)
+        m_microscopeInfoContainer->setVisible(true);
+
+    auto *group = new QParallelAnimationGroup(this);
+    constexpr int kDurationMs = 320;
+
+    auto *minAnim = new QPropertyAnimation(m_microscopeInfoContainer, "minimumWidth", group);
+    minAnim->setDuration(kDurationMs);
+    minAnim->setStartValue(m_microscopeInfoContainer->minimumWidth());
+    minAnim->setEndValue(targetWidth);
+    minAnim->setEasingCurve(QEasingCurve::OutCubic);
+    group->addAnimation(minAnim);
+
+    auto *maxAnim = new QPropertyAnimation(m_microscopeInfoContainer, "maximumWidth", group);
+    maxAnim->setDuration(kDurationMs);
+    maxAnim->setStartValue(m_microscopeInfoContainer->maximumWidth());
+    maxAnim->setEndValue(targetWidth);
+    maxAnim->setEasingCurve(QEasingCurve::OutCubic);
+    group->addAnimation(maxAnim);
+
+    if (collapsed) {
+        connect(group, &QParallelAnimationGroup::finished, this, [this]() {
+            m_microscopeInfoContainer->setVisible(false);
+        });
+    }
+    connect(group, &QParallelAnimationGroup::finished, this, [this, group]() {
+        if (m_microscopeInfoAnim == group)
+            m_microscopeInfoAnim = nullptr;
+    });
+
+    m_microscopeInfoAnim = group;
+    group->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 void MainWindow::promptRenamePhoto(const QString &path)
@@ -790,8 +873,6 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
     m_idleScreen->setGeometry(rect());
-    if (m_microscopeInfoPanel->isVisible())
-        positionMicroscopeInfoPanel();
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
