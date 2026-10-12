@@ -22,6 +22,7 @@ constexpr int kMinFrameIntervalMs = 8;
 // probing worker thread, read on the UI thread when the resolution menu
 // opens — enumerating again right then would stall the click for as long as
 // the slowest driver takes to answer.
+std::atomic<int> g_probeCount{0};
 QMutex g_dsCacheMutex;
 QVector<DirectShowDevice> g_dsCache;
 
@@ -93,8 +94,14 @@ QVector<CameraDeviceInfo> UvcCameraBackend::enumerateDevices()
     return probeDevices();
 }
 
+int UvcCameraBackend::probeCount()
+{
+    return g_probeCount;
+}
+
 QVector<CameraDeviceInfo> UvcCameraBackend::probeDevices()
 {
+    ++g_probeCount;
     // No reliable way to ask the OS for a device's friendly capability set
     // without opening it, so this probes each index directly: request a
     // large resolution and see what actually comes back. Returns every

@@ -20,6 +20,7 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QPixmap>
+#include <QShortcut>
 #include <QStatusBar>
 #include <QTextStream>
 #include <QVBoxLayout>
@@ -256,6 +257,21 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_bottomBar, &BottomBar::zoomInRequested, this, &MainWindow::onZoomInRequested);
     connect(m_bottomBar, &BottomBar::zoomOutRequested, this, &MainWindow::onZoomOutRequested);
     connect(m_bottomBar, &BottomBar::zoomResetRequested, this, &MainWindow::onZoomResetRequested);
+    // Keyboard shortcuts for the common actions (active whenever this window
+    // is the active one; dialogs are separate windows, so typing in them is
+    // never hijacked).
+    auto addShortcut = [this](const QKeySequence &keys, void (MainWindow::*slot)()) {
+        auto *shortcut = new QShortcut(keys, this);
+        connect(shortcut, &QShortcut::activated, this, slot);
+    };
+    addShortcut(QKeySequence(Qt::Key_Space), &MainWindow::onPhotoRequested);
+    addShortcut(QKeySequence(Qt::Key_V), &MainWindow::onVideoToggleRequested);
+    addShortcut(QKeySequence(Qt::Key_F11), &MainWindow::onFullscreenRequested);
+    addShortcut(QKeySequence(Qt::Key_Plus), &MainWindow::onZoomInRequested);
+    addShortcut(QKeySequence(Qt::Key_Equal), &MainWindow::onZoomInRequested);
+    addShortcut(QKeySequence(Qt::Key_Minus), &MainWindow::onZoomOutRequested);
+    addShortcut(QKeySequence(Qt::Key_0), &MainWindow::onZoomResetRequested);
+
     connect(m_topBar, &TopStatusBar::teacherModeRequested, this, &MainWindow::onTeacherModeRequested);
     connect(m_topBar, &TopStatusBar::microscopeInfoRequested, this, &MainWindow::onMicroscopeInfoRequested);
     connect(m_topBar, &TopStatusBar::resolutionClicked, this, &MainWindow::onResolutionClicked);

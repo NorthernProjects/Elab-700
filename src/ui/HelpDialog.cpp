@@ -66,8 +66,9 @@ HelpDialog::HelpDialog(QWidget *parent) : QDialog(parent)
     contentLayout->addWidget(makeHelpRow(content, QStringLiteral("−ㅤ+"), tr("Zoom"),
         tr("Zoome ou dézoome l'image affichée. Clique sur le pourcentage au milieu pour revenir à 100%.")));
     contentLayout->addWidget(makeHelpRow(content, QStringLiteral("●"), tr("Netteté"),
-        tr("Petite barre en haut à gauche de l'image : verte si l'image est nette, rouge si elle est floue "
-           "— tourne la molette de mise au point du microscope jusqu'à ce qu'elle devienne verte.")));
+        tr("Petite barre en haut à gauche de l'image. Elle compare la netteté actuelle à la meilleure "
+           "obtenue récemment : verte = aussi net que possible, rouge = flou. Tourne la molette de mise "
+           "au point d'un côté puis de l'autre : la barre atteint son maximum quand l'image est nette.")));
     contentLayout->addWidget(makeHelpRow(content, QStringLiteral("▦"), tr("Grille"),
         tr("Affiche une grille sur l'image pour mieux cadrer une photo. Clique sur le badge pour "
            "l'activer ou la désactiver (vert = activée, rouge = désactivée).")));
@@ -78,6 +79,8 @@ HelpDialog::HelpDialog(QWidget *parent) : QDialog(parent)
            "utiliser, ou pour déconnecter la caméra proprement.")));
     contentLayout->addWidget(makeHelpRow(content, QStringLiteral("🔎"), tr("Résolution"),
         tr("Clique sur le chiffre (par exemple 1280x960) pour choisir une autre résolution de caméra.")));
+    contentLayout->addWidget(makeHelpRow(content, QStringLiteral("⌨"), tr("Raccourcis clavier"),
+        tr("Espace : photo · V : vidéo · F11 : plein écran · + / − : zoom · 0 : zoom à 100 %")));
     contentLayout->addWidget(makeHelpRow(content, QStringLiteral("📐"), tr("Analyse"),
         tr("Comptage (un clic = un marqueur numéroté), mesures de distances en µm/mm (cliquer-"
            "glisser, selon l'étalonnage de l'échelle) et quadrillage de comptage — sur l'image en "

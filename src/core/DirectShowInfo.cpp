@@ -1,5 +1,7 @@
 #include "DirectShowInfo.h"
 
+#include <QStringList>
+
 #if defined(Q_OS_WIN)
 
 #ifndef NOMINMAX
@@ -162,6 +164,33 @@ QVector<DirectShowDevice> enumerateDirectShowDevices()
     return devices;
 }
 
+QString directShowDeviceSignature()
+{
+    ComScope com;
+    ICreateDevEnum *deviceEnum = nullptr;
+    if (FAILED(CoCreateInstance(CLSID_SystemDeviceEnum, nullptr, CLSCTX_INPROC_SERVER,
+                                IID_ICreateDevEnum, reinterpret_cast<void **>(&deviceEnum))) || !deviceEnum)
+        return QString();
+
+    QStringList entries;
+    IEnumMoniker *monikers = nullptr;
+    if (deviceEnum->CreateClassEnumerator(CLSID_VideoInputDeviceCategory, &monikers, 0) == S_OK && monikers) {
+        IMoniker *moniker = nullptr;
+        while (monikers->Next(1, &moniker, nullptr) == S_OK) {
+            IPropertyBag *bag = nullptr;
+            if (SUCCEEDED(moniker->BindToStorage(nullptr, nullptr, IID_IPropertyBag, reinterpret_cast<void **>(&bag))) && bag) {
+                entries << readProperty(bag, L"FriendlyName") + QLatin1Char('|') + readProperty(bag, L"DevicePath");
+                bag->Release();
+            }
+            moniker->Release();
+            moniker = nullptr;
+        }
+        monikers->Release();
+    }
+    deviceEnum->Release();
+    return entries.isEmpty() ? QStringLiteral("none") : entries.join(QLatin1Char('\n'));
+}
+
 struct DirectShowControls::Impl {
     ComScope com;
     IBaseFilter *filter = nullptr;
@@ -306,6 +335,11 @@ bool DirectShowControls::writeAuto(DsControl control)
 QVector<DirectShowDevice> enumerateDirectShowDevices()
 {
     return {};
+}
+
+QString directShowDeviceSignature()
+{
+    return QString();
 }
 
 struct DirectShowControls::Impl {};

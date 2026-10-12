@@ -104,6 +104,11 @@ int main(int argc, char *argv[])
     // `--grab-teacher out.png` does the same for the teacher panel (no camera).
     QString grabPath;
     QString grabTeacherPath;
+    bool forceLightTheme = false; // only meaningful together with --grab/--grab-teacher
+    for (int i = 1; i < argc; ++i) {
+        if (QString::fromLocal8Bit(argv[i]) == QLatin1String("--light"))
+            forceLightTheme = true;
+    }
     for (int i = 1; i + 1 < argc; ++i) {
         const QString arg = QString::fromLocal8Bit(argv[i]);
         if (arg == QLatin1String("--grab"))
@@ -125,7 +130,8 @@ int main(int argc, char *argv[])
     // its own AppSettings instance) exists — both instances are thin QSettings
     // wrappers with no meaningful separate state, so this is harmless.
     AppSettings initialSettingsPeek;
-    app.setStyleSheet(loadThemeStylesheet(initialSettingsPeek.lightTheme()));
+    const bool lightForCapture = forceLightTheme && (!grabPath.isEmpty() || !grabTeacherPath.isEmpty());
+    app.setStyleSheet(loadThemeStylesheet(lightForCapture || initialSettingsPeek.lightTheme()));
 
     // Must be installed before any tr() call runs (i.e. before any widget is
     // constructed below) — see AppSettings::uiLanguage(). Absent in the

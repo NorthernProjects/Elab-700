@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <QtConcurrent/QtConcurrentRun>
 
+#include "DirectShowInfo.h"
 #include "UvcCameraBackend.h"
 
 namespace {
@@ -19,6 +20,10 @@ namespace {
 // camera attached) doesn't hit that case, and the device picker still lets
 // a teacher manually override if it ever does.
 constexpr long kMinMicroscopeArea = 300000;
+
+// A camera that was seen but could not be opened (busy in another program…)
+// is retried this often — slowly, to leave it alone.
+constexpr qint64 kRetryProbeMs = 15000;
 
 bool looksLikeMicroscope(const CameraDeviceInfo &device)
 {
@@ -88,6 +93,8 @@ CameraManager::CameraManager(QObject *parent) : QObject(parent)
 
     connect(m_backend.data(), &CameraBackend::deviceConnected, this, &CameraManager::connected);
     connect(m_backend.data(), &CameraBackend::deviceDisconnected, this, &CameraManager::disconnected);
+    // Any lost/switched connection deserves a fresh full probe right away.
+    connect(m_backend.data(), &CameraBackend::deviceDisconnected, this, [this]() { m_forceProbe = true; });
 
     connect(&m_rescanTimer, &QTimer::timeout, this, &CameraManager::rescan);
     m_rescanTimer.setInterval(2000);
@@ -129,18 +136,36 @@ void CameraManager::rescan()
     if (m_backend->isOpen() || m_probeInFlight || m_manuallyDisconnected)
         return;
 
-    // Probing several capture indices runs entirely on a worker thread
-    // (see probeDevices()) so a slow/flaky driver never freezes the UI —
-    // onProbeFinished() picks up the result back on this (the UI) thread.
+    // Probing runs entirely on a worker thread so a slow/flaky driver never
+    // freezes the UI — onProbeFinished() picks up the result back on this
+    // (the UI) thread.
     m_probeInFlight = true;
-    m_probeWatcher.setFuture(QtConcurrent::run(&UvcCameraBackend::probeDevices));
+    const QString lastSignature = m_lastSignature;
+    const bool force = m_forceProbe;
+    const qint64 sinceLastProbe = m_lastProbeClock.isValid() ? m_lastProbeClock.elapsed() : kRetryProbeMs + 1;
+    m_probeWatcher.setFuture(QtConcurrent::run([lastSignature, force, sinceLastProbe]() {
+        ProbeResult result;
+        result.signature = directShowDeviceSignature();
+        const bool listChanged = result.signature.isEmpty() || result.signature != lastSignature;
+        result.probed = force || listChanged || sinceLastProbe > kRetryProbeMs;
+        if (result.probed)
+            result.devices = UvcCameraBackend::probeDevices();
+        return result;
+    }));
 }
 
 void CameraManager::onProbeFinished()
 {
     m_probeInFlight = false;
-    m_devices = m_probeWatcher.result();
+    const ProbeResult result = m_probeWatcher.result();
+    if (!result.probed)
+        return; // nothing changed, nothing was touched
+
+    m_devices = result.devices;
     classifyDevices(m_devices);
+    m_lastSignature = result.signature;
+    m_forceProbe = false;
+    m_lastProbeClock.restart();
 
     // The camera may have been opened manually (forceConnect) or explicitly
     // disconnected while this scan was in flight — either way, the result we
@@ -233,6 +258,7 @@ void CameraManager::setPoweredOn(bool on)
     }
 
     m_manuallyDisconnected = false;
+    m_forceProbe = true;
     emit poweredOnChanged(true);
     rescan(); // no-op if already open/probing; otherwise retries right away
 }

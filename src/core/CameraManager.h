@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QFutureWatcher>
+#include <QElapsedTimer>
 #include <QObject>
 #include <QScopedPointer>
 #include <QTimer>
@@ -82,6 +83,21 @@ private:
     // every 2s while no camera is connected, which used to freeze the whole
     // app (including the startup splash animation) for the duration of each
     // scan.
-    QFutureWatcher<QVector<CameraDeviceInfo>> m_probeWatcher;
+    //
+    // A scan first reads the camera list from Windows without opening
+    // anything (a cheap "signature"), and only runs the full probe — which
+    // briefly opens every camera — when that list changed, a connection was
+    // just lost/switched on, or a camera was seen but could not be opened
+    // (retried slowly). Otherwise a disconnected app used to poke every
+    // camera every 2 seconds, forever.
+    struct ProbeResult {
+        QString signature;
+        bool probed = false;
+        QVector<CameraDeviceInfo> devices;
+    };
+    QFutureWatcher<ProbeResult> m_probeWatcher;
     bool m_probeInFlight = false;
+    bool m_forceProbe = true;
+    QString m_lastSignature;
+    QElapsedTimer m_lastProbeClock;
 };

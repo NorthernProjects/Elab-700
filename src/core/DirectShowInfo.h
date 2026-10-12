@@ -20,6 +20,12 @@ struct DirectShowDevice {
 // Safe to call from any thread (initializes COM for the calling thread).
 QVector<DirectShowDevice> enumerateDirectShowDevices();
 
+// A cheap fingerprint of the camera list (names + USB paths only — the
+// devices are not even bound, so nothing is opened). Changes when a camera is
+// plugged in or removed. "none" when no camera exists; empty string when the
+// platform can't tell (callers must then assume "changed").
+QString directShowDeviceSignature();
+
 enum class DsControl { Exposure, Gain, Brightness, WhiteBalance };
 
 struct DsControlRange {

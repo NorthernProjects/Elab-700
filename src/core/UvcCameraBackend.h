@@ -49,6 +49,10 @@ public:
     // enumerateDevices() precisely to get that off-thread behavior.
     static QVector<CameraDeviceInfo> probeDevices();
 
+    // How many full probes (which briefly open every camera) ran so far —
+    // diagnostics/tests only.
+    static int probeCount();
+
     bool open(const QString &deviceId) override;
     void close() override;
     bool isOpen() const override;
