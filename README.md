@@ -94,9 +94,36 @@ l'ABI exacte d'un SDK propriétaire. Pour activer la vraie caméra :
    Si une autre application (ToupView, un autre logiciel de capture) a la
    caméra ouverte en même temps, fermez-la d'abord : l'accès est exclusif.
 
-`DirectShowCameraBackend.cpp` documente en commentaire pourquoi certains
-réglages (exposition auto, etc.) restent "au mieux" : OpenCV n'expose pas de
-façon portable les plages natives de chaque propriété DirectShow.
+### Ce que l'appli lit directement dans DirectShow
+
+OpenCV ne donne ni le nom d'une caméra, ni ses modes, ni les plages de ses
+réglages. `src/core/DirectShowInfo.*` interroge donc DirectShow (en lecture
+seule, sans démarrer de flux) pour obtenir :
+
+- **le nom réel** de chaque caméra (« OMAX… », « Integrated Webcam »…) : c'est
+  ce qui permet de reconnaître le microscope (`CameraManager::classifyDevices`) ;
+  sans nom reconnaissable, on retombe sur la forme 4:3 de l'image ;
+- **les résolutions réellement supportées** (menu de résolution) ;
+- **les vrais réglages** exposition/gain (unités et limites du pilote : par
+  exemple l'exposition d'une webcam va de -10 à -4, en log2 de secondes — la
+  traiter comme 0-100 bloquait l'image au maximum de luminosité). Les réglages
+  de l'enseignant sont mémorisés par caméra.
+
+L'image est lue sur un thread dédié (`UvcCameraBackend::captureLoop`) :
+l'interface ne peut plus être bloquée par la caméra.
+
+### Outils de diagnostic (sans fenêtre)
+
+```bash
+# Ce que Windows rapporte pour chaque caméra : nom, chemin USB, modes, réglages
+E-Lab700.exe --list-cameras cameras.txt
+
+# Image de l'interface rendue hors écran (aucune fenêtre n'apparaît) ;
+# nécessite le plugin Qt "offscreen" (QT_QPA_PLATFORM_PLUGIN_PATH) et, sous
+# Windows, QT_QPA_FONTDIR=C:/Windows/Fonts pour avoir du texte
+E-Lab700.exe --grab interface.png
+E-Lab700.exe --grab-teacher panneau.png
+```
 
 ## Compiler (Windows, sans le SDK, pour tester l'UI immédiatement)
 
@@ -361,6 +388,10 @@ Puis glisser `E-Lab700.app` dans un `.dmg` (ou directement dans
   au moment de l'écriture — premier passage à valider.
 - Un backend caméra UVC générique (webcam standard) ou carte de capture HDMI
   peut être ajouté en implémentant `CameraBackend`, sans toucher à l'UI.
-- Pas de tests automatisés pour l'instant (l'essentiel de la logique métier
-  — `CaptureManager`, `GalleryModel`, `AppSettings` — est découplé de Qt
-  Widgets et testable unitairement si besoin).
+- Peu de tests automatisés : seul le calcul de netteté (`SharpnessMeter`) en a
+  un (`cmake -DE_LAB_BUILD_TESTS=ON`, puis `ctest -C Release`). L'essentiel de
+  la logique métier — `CaptureManager`, `GalleryModel`, `AppSettings` — est
+  découplé de Qt Widgets et testable unitairement si besoin.
+- L'ouverture de la caméra et le changement de résolution (~1,5 s) bloquent
+  encore brièvement l'interface : seule la lecture des images est sur un thread
+  séparé.

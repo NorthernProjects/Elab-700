@@ -275,6 +275,14 @@ QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox {
     selection-background-color: #2a5570;
 }
 
+/* Number fields hold text like "10 min" or "3 jours" plus the up/down
+   buttons; without a floor the text area got clipped ("10 mi"). */
+QSpinBox, QDoubleSpinBox {
+    min-width: 104px;
+    min-height: 16px;
+    padding-right: 4px;
+}
+
 QComboBox:hover, QLineEdit:hover, QSpinBox:hover, QDoubleSpinBox:hover {
     border-color: #35526e;
 }

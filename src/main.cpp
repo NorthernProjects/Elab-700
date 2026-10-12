@@ -12,9 +12,11 @@
 
 #include "core/AppSettings.h"
 #include "core/DirectShowInfo.h"
+#include "core/NullCameraBackend.h"
 #include "ui/MainWindow.h"
 #include "ui/ModeSelectionDialog.h"
 #include "ui/SplashScreen.h"
+#include "ui/TeacherPanel.h"
 
 namespace {
 QString loadThemeStylesheet(bool light)
@@ -99,12 +101,17 @@ int main(int argc, char *argv[])
     // Visual check without showing anything on a real screen: `--grab out.png`
     // runs the whole app on Qt's offscreen platform, saves a picture of the
     // main window a few seconds after start-up and exits.
+    // `--grab-teacher out.png` does the same for the teacher panel (no camera).
     QString grabPath;
+    QString grabTeacherPath;
     for (int i = 1; i + 1 < argc; ++i) {
-        if (QString::fromLocal8Bit(argv[i]) == QLatin1String("--grab"))
+        const QString arg = QString::fromLocal8Bit(argv[i]);
+        if (arg == QLatin1String("--grab"))
             grabPath = QString::fromLocal8Bit(argv[i + 1]);
+        else if (arg == QLatin1String("--grab-teacher"))
+            grabTeacherPath = QString::fromLocal8Bit(argv[i + 1]);
     }
-    if (!grabPath.isEmpty())
+    if (!grabPath.isEmpty() || !grabTeacherPath.isEmpty())
         qputenv("QT_QPA_PLATFORM", "offscreen");
 
     QApplication app(argc, argv);
@@ -128,6 +135,16 @@ int main(int argc, char *argv[])
     if (initialSettingsPeek.uiLanguage() == QLatin1String("en")
         && translator.load(QStringLiteral(":/i18n/elab700_en.qm"))) {
         app.installTranslator(&translator);
+    }
+
+    if (!grabTeacherPath.isEmpty()) {
+        NullCameraBackend noCamera;
+        TeacherPanel panel(&initialSettingsPeek, &noCamera, []() { return QImage(); });
+        panel.resize(1100, 2600); // tall enough that nothing needs scrolling
+        panel.show();
+        app.processEvents();
+        panel.grab().save(grabTeacherPath);
+        return 0;
     }
 
     // First launch: pick the edition (Scolaire / Grand public / Laboratoire)

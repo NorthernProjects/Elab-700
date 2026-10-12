@@ -120,6 +120,10 @@ set(UI_SOURCES
     src/ui/VideoView.h
     src/ui/VideoView.cpp
     src/ui/BottomBar.h
+    src/ui/LineIcons.h
+    src/ui/LineIcons.cpp
+    src/ui/IconButton.h
+    src/ui/IconButton.cpp
     src/ui/BottomBar.cpp
     src/ui/TopStatusBar.h
     src/ui/TopStatusBar.cpp
@@ -277,6 +281,20 @@ if(NOT E_LAB_QT5)
         BASE "${CMAKE_CURRENT_BINARY_DIR}"
         FILES ${ELAB_QM_FILES}
     )
+endif()
+
+# Optional unit tests (cmake -DE_LAB_BUILD_TESTS=ON, then ctest -C Release).
+option(E_LAB_BUILD_TESTS "Build the automated tests" OFF)
+if(E_LAB_BUILD_TESTS)
+    enable_testing()
+    add_executable(sharpness_test tests/sharpness_test.cpp src/core/SharpnessMeter.cpp)
+    target_include_directories(sharpness_test PRIVATE src)
+    if(E_LAB_QT5)
+        target_link_libraries(sharpness_test PRIVATE Qt5::Gui)
+    else()
+        target_link_libraries(sharpness_test PRIVATE Qt6::Gui)
+    endif()
+    add_test(NAME sharpness COMMAND sharpness_test)
 endif()
 
 install(TARGETS MicroscopeLab

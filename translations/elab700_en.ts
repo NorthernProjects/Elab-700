@@ -150,40 +150,60 @@ Connect the camera or open an image.</translation>
 <context>
     <name>BottomBar</name>
     <message>
-        <location filename="../src/ui/BottomBar.cpp" line="50"/>
         <source>📷
 Photo</source>
-        <translation>📷
+        <translation type="vanished">📷
 Photo</translation>
+    </message>
+    <message>
+        <source>🎥
+Vidéo</source>
+        <translation type="vanished">🎥
+Video</translation>
+    </message>
+    <message>
+        <source>✨
+Auto</source>
+        <translation type="vanished">✨
+Auto</translation>
+    </message>
+    <message>
+        <source>🖼
+Galerie</source>
+        <translation type="vanished">🖼
+Gallery</translation>
+    </message>
+    <message>
+        <source>⛶
+Plein écran</source>
+        <translation type="vanished">⛶
+Full screen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BottomBar.cpp" line="50"/>
+        <source>Photo</source>
+        <translation>Photo</translation>
     </message>
     <message>
         <location filename="../src/ui/BottomBar.cpp" line="51"/>
         <location filename="../src/ui/BottomBar.cpp" line="147"/>
-        <source>🎥
-Vidéo</source>
-        <translation>🎥
-Video</translation>
+        <source>Vidéo</source>
+        <translation>Video</translation>
     </message>
     <message>
         <location filename="../src/ui/BottomBar.cpp" line="52"/>
-        <source>✨
-Auto</source>
-        <translation>✨
-Auto</translation>
+        <source>Auto</source>
+        <translation>Auto</translation>
     </message>
     <message>
         <location filename="../src/ui/BottomBar.cpp" line="53"/>
-        <source>🖼
-Galerie</source>
-        <translation>🖼
-Gallery</translation>
+        <source>Galerie</source>
+        <translation>Gallery</translation>
     </message>
     <message>
         <location filename="../src/ui/BottomBar.cpp" line="54"/>
-        <source>⛶
-Plein écran</source>
-        <translation>⛶
-Full screen</translation>
+        <source>Plein écran</source>
+        <translation>Full screen</translation>
     </message>
     <message>
         <location filename="../src/ui/BottomBar.cpp" line="64"/>
@@ -191,31 +211,47 @@ Full screen</translation>
         <translation>Back to 100%</translation>
     </message>
     <message>
+        <location filename="../src/ui/BottomBar.cpp" line="90"/>
+        <source>Analyse</source>
+        <translation>Analysis</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BottomBar.cpp" line="99"/>
+        <source>Schéma</source>
+        <translation>Diagram</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BottomBar.cpp" line="100"/>
+        <source>Glossaire</source>
+        <translation>Glossary</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BottomBar.cpp" line="147"/>
+        <source>Stop</source>
+        <translation>Stop</translation>
+    </message>
+    <message>
         <source>Luminosité</source>
         <translation type="vanished">Brightness</translation>
     </message>
     <message>
-        <location filename="../src/ui/BottomBar.cpp" line="90"/>
         <source>📐
 Analyse</source>
-        <translation>📐
+        <translation type="vanished">📐
 Analysis</translation>
     </message>
     <message>
-        <location filename="../src/ui/BottomBar.cpp" line="99"/>
         <source>🔬 Schéma</source>
-        <translation>🔬 Diagram</translation>
+        <translation type="vanished">🔬 Diagram</translation>
     </message>
     <message>
-        <location filename="../src/ui/BottomBar.cpp" line="100"/>
         <source>📖 Glossaire</source>
-        <translation>📖 Glossary</translation>
+        <translation type="vanished">📖 Glossary</translation>
     </message>
     <message>
-        <location filename="../src/ui/BottomBar.cpp" line="147"/>
         <source>🔴
 Stop</source>
-        <translation>🔴
+        <translation type="vanished">🔴
 Stop</translation>
     </message>
 </context>

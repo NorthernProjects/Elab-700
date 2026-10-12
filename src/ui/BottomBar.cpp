@@ -5,16 +5,17 @@
 #include <QStyle>
 #include <QVariant>
 
+#include "IconButton.h"
+
 namespace {
 
-QPushButton *makeBigButton(const QString &text, const QString &objectName)
+IconButton *makeBigButton(LineIcon icon, const QString &text, const QString &objectName)
 {
-    auto *button = new QPushButton(text);
+    auto *button = new IconButton(icon, text, IconButton::Layout::IconAboveText);
     button->setObjectName(objectName);
     button->setMinimumSize(140, 90);
-    button->setCursor(Qt::PointingHandCursor);
     QFont font = button->font();
-    font.setPointSize(14);
+    font.setPointSize(13);
     font.setBold(true);
     button->setFont(font);
     return button;
@@ -33,11 +34,10 @@ QPushButton *makeZoomButton(const QString &text, const QString &objectName)
     return button;
 }
 
-QPushButton *makeSecondaryButton(const QString &text)
+IconButton *makeSecondaryButton(LineIcon icon, const QString &text)
 {
-    auto *button = new QPushButton(text);
+    auto *button = new IconButton(icon, text, IconButton::Layout::IconBesideText);
     button->setFixedHeight(44);
-    button->setCursor(Qt::PointingHandCursor);
     return button;
 }
 
@@ -47,11 +47,11 @@ BottomBar::BottomBar(QWidget *parent) : QWidget(parent)
 {
     setObjectName("BottomBar");
 
-    m_photoButton = makeBigButton(tr("📷\nPhoto"), "photoButton");
-    m_videoButton = makeBigButton(tr("🎥\nVidéo"), "videoButton");
-    m_autoButton = makeBigButton(tr("✨\nAuto"), "autoButton");
-    m_galleryButton = makeBigButton(tr("🖼\nGalerie"), "galleryButton");
-    m_fullscreenButton = makeBigButton(tr("⛶\nPlein écran"), "fullscreenButton");
+    m_photoButton = makeBigButton(LineIcon::Camera, tr("Photo"), "photoButton");
+    m_videoButton = makeBigButton(LineIcon::Video, tr("Vidéo"), "videoButton");
+    m_autoButton = makeBigButton(LineIcon::Sparkle, tr("Auto"), "autoButton");
+    m_galleryButton = makeBigButton(LineIcon::Gallery, tr("Galerie"), "galleryButton");
+    m_fullscreenButton = makeBigButton(LineIcon::Fullscreen, tr("Plein écran"), "fullscreenButton");
 
     m_zoomOutButton = makeZoomButton(QStringLiteral("−"), "zoomOutButton");
     m_zoomInButton = makeZoomButton(QStringLiteral("+"), "zoomInButton");
@@ -87,7 +87,7 @@ BottomBar::BottomBar(QWidget *parent) : QWidget(parent)
     // Counting/measuring analysis tools — common to every edition (the
     // grand-public and school editions analyze images too, not just the
     // lab edition).
-    auto *analysisButton = makeBigButton(tr("📐\nAnalyse"), "galleryButton");
+    auto *analysisButton = makeBigButton(LineIcon::Analysis, tr("Analyse"), "galleryButton");
     buttonsLayout->addWidget(analysisButton);
     connect(analysisButton, &QPushButton::clicked, this, &BottomBar::analysisRequested);
     buttonsLayout->addWidget(m_galleryButton);
@@ -96,8 +96,8 @@ BottomBar::BottomBar(QWidget *parent) : QWidget(parent)
     // Bottom-right, next to Plein écran — the diagram/glossary learning
     // aids, in the column that used to just mirror the left zoom column's
     // stretch for centering purposes.
-    m_diagramButton = makeSecondaryButton(tr("🔬 Schéma"));
-    m_glossaryButton = makeSecondaryButton(tr("📖 Glossaire"));
+    m_diagramButton = makeSecondaryButton(LineIcon::Microscope, tr("Schéma"));
+    m_glossaryButton = makeSecondaryButton(LineIcon::Book, tr("Glossaire"));
     auto *learningAidsContainer = new QWidget(this);
     auto *learningAidsLayout = new QHBoxLayout(learningAidsContainer);
     learningAidsLayout->setContentsMargins(0, 0, 0, 0);
@@ -144,7 +144,8 @@ void BottomBar::setLearningAidsVisible(bool visible)
 
 void BottomBar::setRecording(bool recording)
 {
-    m_videoButton->setText(recording ? tr("🔴\nStop") : tr("🎥\nVidéo"));
+    m_videoButton->setText(recording ? tr("Stop") : tr("Vidéo"));
+    m_videoButton->setLineIcon(recording ? LineIcon::Stop : LineIcon::Video);
     m_videoButton->setProperty("recording", QVariant(recording));
     m_videoButton->style()->unpolish(m_videoButton);
     m_videoButton->style()->polish(m_videoButton);

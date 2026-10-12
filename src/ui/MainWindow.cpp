@@ -483,6 +483,7 @@ void MainWindow::onTeacherModeRequested()
     const bool autoBefore = hadCamera && panelBackend->autoExposure();
     const int exposureBefore = hadCamera ? panelBackend->exposure() : 0;
     const int gainBefore = hadCamera ? panelBackend->gain() : 0;
+    const QSize resolutionBefore = hadCamera ? panelBackend->currentResolution() : QSize();
 
     TeacherPanel panel(&m_settings, panelBackend,
                         [this]() { return m_videoView->currentFrame(); }, this);
@@ -493,6 +494,12 @@ void MainWindow::onTeacherModeRequested()
     // Whatever exposure/gain the teacher left is remembered for this camera
     // and re-applied the next time it connects (see onCameraConnected).
     if (hadCamera && panelBackend->isOpen()) {
+        const QSize resolutionAfter = panelBackend->currentResolution();
+        if (resolutionAfter.isValid() && resolutionAfter != resolutionBefore) {
+            m_userChoseResolution = true;
+            m_userChosenResolution = resolutionAfter;
+            m_settings.setCameraAdjustment(m_currentCameraKey, QStringLiteral("resolution"), resolutionAfter);
+        }
         const bool autoAfter = panelBackend->autoExposure();
         const int exposureAfter = panelBackend->exposure();
         const int gainAfter = panelBackend->gain();
@@ -526,6 +533,14 @@ void MainWindow::onCameraConnected(const CameraDeviceInfo &info)
         backend->setExposure(savedExposure.toInt());
     if (savedGain.isValid())
         backend->setGain(savedGain.toInt());
+
+    // A resolution picked earlier for this very camera is a deliberate
+    // choice: re-apply it instead of auto-tuning from scratch each launch.
+    const QVariant savedResolution = m_settings.cameraAdjustment(m_currentCameraKey, QStringLiteral("resolution"));
+    if (savedResolution.isValid() && savedResolution.toSize().isValid()) {
+        m_userChoseResolution = true;
+        m_userChosenResolution = savedResolution.toSize();
+    }
 
     m_topBar->setConnected(true, info.model);
     m_topBar->setResolution(backend->currentResolution());
@@ -629,6 +644,7 @@ void MainWindow::onResolutionClicked()
             // reconnect within this session (see onCameraConnected()).
             m_userChoseResolution = true;
             m_userChosenResolution = size;
+            m_settings.setCameraAdjustment(m_currentCameraKey, QStringLiteral("resolution"), size);
 
             CameraBackend *liveBackend = m_cameraManager.backend();
             if (!liveBackend->setResolution(size))

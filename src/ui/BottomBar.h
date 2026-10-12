@@ -3,6 +3,8 @@
 #include <QPushButton>
 #include <QWidget>
 
+class IconButton;
+
 // Bottom action bar for the student screen: Photo, Video, Auto, Galerie,
 // Plein écran, plus a small discreet digital zoom +/- control off to one
 // side (the camera's own field of view is fixed by the microscope's optics,
@@ -37,7 +39,7 @@ signals:
 
 private:
     QPushButton *m_photoButton;
-    QPushButton *m_videoButton;
+    IconButton *m_videoButton;
     QPushButton *m_autoButton;
     QPushButton *m_galleryButton;
     QPushButton *m_fullscreenButton;
