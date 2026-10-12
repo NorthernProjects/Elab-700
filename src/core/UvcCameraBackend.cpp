@@ -6,10 +6,40 @@
 #include <vector>
 
 #include <QImage>
+#include <QMutex>
+#include <QMutexLocker>
+
+#include "DirectShowInfo.h"
 
 namespace {
 constexpr int kMaxProbedIndex = 8;
 constexpr int kCaptureIntervalMs = 33; // ~30 fps target
+
+// What DirectShow said about each camera at the last scan. Filled on the
+// probing worker thread, read on the UI thread when the resolution menu
+// opens — enumerating again right then would stall the click for as long as
+// the slowest driver takes to answer.
+QMutex g_dsCacheMutex;
+QVector<DirectShowDevice> g_dsCache;
+
+QVector<QSize> modesForIndex(int index)
+{
+    {
+        QMutexLocker lock(&g_dsCacheMutex);
+        for (const DirectShowDevice &device : g_dsCache) {
+            if (device.index == index)
+                return device.resolutions;
+        }
+    }
+    const QVector<DirectShowDevice> fresh = enumerateDirectShowDevices();
+    QMutexLocker lock(&g_dsCacheMutex);
+    g_dsCache = fresh;
+    for (const DirectShowDevice &device : g_dsCache) {
+        if (device.index == index)
+            return device.resolutions;
+    }
+    return {};
+}
 
 // The one platform difference: which OpenCV capture API backs cv::VideoCapture.
 #if defined(Q_OS_WIN)
@@ -83,6 +113,27 @@ QVector<CameraDeviceInfo> UvcCameraBackend::probeDevices()
         info.resolution = QSize(frame.cols, frame.rows);
         info.displayName = tr("Caméra USB (%1x%2)").arg(frame.cols).arg(frame.rows);
         devices.append(info);
+    }
+
+    // The driver's own name for each camera (and the modes it really
+    // supports), matched to OpenCV's index — the reliable way to tell the
+    // microscope from the laptop's webcam, instead of guessing from image
+    // size alone.
+    const QVector<DirectShowDevice> dsDevices = enumerateDirectShowDevices();
+    {
+        QMutexLocker lock(&g_dsCacheMutex);
+        g_dsCache = dsDevices;
+    }
+    for (CameraDeviceInfo &info : devices) {
+        const int index = info.id.toInt();
+        for (const DirectShowDevice &ds : dsDevices) {
+            if (ds.index != index)
+                continue;
+            info.deviceName = ds.name;
+            if (!ds.name.isEmpty())
+                info.displayName = tr("%1 (%2x%3)").arg(ds.name).arg(info.resolution.width()).arg(info.resolution.height());
+            break;
+        }
     }
 
     return devices;
@@ -233,11 +284,21 @@ QVector<QSize> UvcCameraBackend::supportedResolutions() const
 {
     if (!isOpen())
         return {};
-    // OpenCV's VideoCapture has no portable "list supported resolutions"
-    // query, so this offers the microscope's three native 4:3 presets
-    // directly — not the live currentResolution() as an extra leading
-    // entry, which used to duplicate whichever preset the camera happened
-    // to already be on and show it twice in the picker menu.
+    // OpenCV's VideoCapture can't list a camera's modes, so ask DirectShow
+    // for the ones this driver really supports (largest first, small
+    // thumbnail-sized modes dropped, capped so the menu stays short).
+    QVector<QSize> modes;
+    for (const QSize &size : modesForIndex(m_openIndex)) {
+        if (size.width() >= 640)
+            modes.append(size);
+    }
+    if (modes.size() > 6)
+        modes.resize(6);
+    if (!modes.isEmpty())
+        return modes;
+
+    // DirectShow gave nothing usable (non-Windows, or a driver that hides
+    // its modes): fall back to the microscope's three usual 4:3 presets.
     return {QSize(2592, 1944), QSize(1280, 960), QSize(640, 480)};
 }
 

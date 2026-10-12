@@ -2,6 +2,7 @@
 
 #include <limits>
 
+#include <QStringList>
 #include <QTimer>
 #include <QtConcurrent/QtConcurrentRun>
 
@@ -23,6 +24,61 @@ bool looksLikeMicroscope(const CameraDeviceInfo &device)
 {
     const long area = static_cast<long>(device.resolution.width()) * device.resolution.height();
     return area >= kMinMicroscopeArea;
+}
+
+bool containsAny(const QString &text, const QStringList &keywords)
+{
+    for (const QString &keyword : keywords) {
+        if (text.contains(keyword, Qt::CaseInsensitive))
+            return true;
+    }
+    return false;
+}
+
+bool nameLooksLikeMicroscope(const QString &name)
+{
+    static const QStringList keywords = {
+        QStringLiteral("omax"), QStringLiteral("microscop"), QStringLiteral("toupcam"),
+        QStringLiteral("touptek"), QStringLiteral("scmos"), QStringLiteral("biolam")};
+    return containsAny(name, keywords);
+}
+
+bool nameLooksLikeWebcam(const QString &name)
+{
+    static const QStringList keywords = {
+        QStringLiteral("integrated"), QStringLiteral("intégr"), QStringLiteral("webcam"),
+        QStringLiteral("facetime"), QStringLiteral("hd camera"), QStringLiteral("ir camera"),
+        QStringLiteral("virtual"), QStringLiteral("droidcam"), QStringLiteral("iriun"),
+        QStringLiteral("camo")};
+    return containsAny(name, keywords);
+}
+
+// The microscope's native presets (640x480, 1280x960, 2592x1944) are all
+// 4:3; a laptop's built-in webcam is typically 16:9 (e.g. 1280x720).
+bool isFourByThree(const QSize &size)
+{
+    if (size.height() <= 0)
+        return false;
+    const double ratio = static_cast<double>(size.width()) / size.height();
+    return qAbs(ratio - 4.0 / 3.0) < 0.05;
+}
+
+// Decides which detected camera is the microscope. The driver's own name is
+// the reliable signal — if any camera is named like a microscope (OMAX, …),
+// exactly those win. Without that (generic driver names like "USB2.0 PC
+// CAMERA", or a non-Windows system) fall back to the image shape: 4:3 and
+// not named like a laptop webcam.
+void classifyDevices(QVector<CameraDeviceInfo> &devices)
+{
+    bool anyNamedMicroscope = false;
+    for (const CameraDeviceInfo &device : devices)
+        anyNamedMicroscope = anyNamedMicroscope || nameLooksLikeMicroscope(device.deviceName);
+
+    for (CameraDeviceInfo &device : devices) {
+        device.likelyMicroscope = anyNamedMicroscope
+            ? nameLooksLikeMicroscope(device.deviceName)
+            : (isFourByThree(device.resolution) && !nameLooksLikeWebcam(device.deviceName));
+    }
 }
 }
 
@@ -56,7 +112,7 @@ QVector<CameraDeviceInfo> CameraManager::microscopeDevices() const
 {
     QVector<CameraDeviceInfo> result;
     for (const CameraDeviceInfo &device : m_devices) {
-        if (looksLikeMicroscope(device))
+        if (looksLikeMicroscope(device) || device.likelyMicroscope)
             result.append(device);
     }
     return result;
@@ -84,6 +140,7 @@ void CameraManager::onProbeFinished()
 {
     m_probeInFlight = false;
     m_devices = m_probeWatcher.result();
+    classifyDevices(m_devices);
 
     // The camera may have been opened manually (forceConnect) or explicitly
     // disconnected while this scan was in flight — either way, the result we
@@ -96,26 +153,30 @@ void CameraManager::onProbeFinished()
 
 void CameraManager::connectToBestCandidate()
 {
-    // Auto-connect only to whichever candidate looks like the microscope,
-    // picking the SMALLEST qualifying resolution if several are present —
-    // never the laptop's own webcam just because it's also there (see
-    // kMinMicroscopeArea for the lower bound that excludes tiny/bogus
-    // readings). This is deliberately the opposite of "pick the biggest
-    // sensor": in practice the OMAX camera negotiates a small default probe
-    // resolution (640x480) while a laptop's built-in webcam commonly
-    // reports something larger (e.g. 1280x720) — picking the smallest
-    // qualifying candidate is what actually lands on the microscope on
-    // real hardware. Anything that doesn't qualify is still listed in
-    // m_devices for manual selection (see forceConnect), just not opened
-    // automatically.
+    // First choice: the camera classified as the microscope (see
+    // classifyDevices — by driver name when possible, else by 4:3 shape),
+    // the smallest if several qualify. Never the laptop's own webcam just
+    // because it's also there. Smallest rather than biggest on purpose: the
+    // OMAX negotiates a small default probe resolution (640x480) while a
+    // laptop webcam commonly reports something larger (e.g. 1280x720).
+    //
+    // Fallback when nothing is classified as the microscope: any camera
+    // above the kMinMicroscopeArea floor (smallest first), so a teacher with
+    // only a plain webcam still gets a picture. Everything else stays
+    // listed in m_devices for manual selection (see forceConnect).
     const CameraDeviceInfo *best = nullptr;
     long bestArea = std::numeric_limits<long>::max();
-    for (const CameraDeviceInfo &device : m_devices) {
-        const long area = static_cast<long>(device.resolution.width()) * device.resolution.height();
-        if (looksLikeMicroscope(device) && area < bestArea) {
-            bestArea = area;
-            best = &device;
+    for (const bool classifiedOnly : {true, false}) {
+        for (const CameraDeviceInfo &device : m_devices) {
+            const long area = static_cast<long>(device.resolution.width()) * device.resolution.height();
+            const bool eligible = classifiedOnly ? device.likelyMicroscope : looksLikeMicroscope(device);
+            if (eligible && area < bestArea) {
+                bestArea = area;
+                best = &device;
+            }
         }
+        if (best)
+            break;
     }
 
     if (best) {

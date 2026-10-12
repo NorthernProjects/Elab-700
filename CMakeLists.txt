@@ -91,6 +91,8 @@ set(CORE_SOURCES
     src/core/CameraBackend.h
     src/core/NullCameraBackend.h
     src/core/NullCameraBackend.cpp
+    src/core/DirectShowInfo.h
+    src/core/DirectShowInfo.cpp
     src/core/UvcCameraBackend.h
     src/core/UvcCameraBackend.cpp
     src/core/CameraManager.h

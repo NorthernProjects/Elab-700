@@ -4,8 +4,13 @@
 #include <QSettings>
 #include <QTextStream>
 #include <QTranslator>
+#include <QtGlobal>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QStringConverter>
+#endif
 
 #include "core/AppSettings.h"
+#include "core/DirectShowInfo.h"
 #include "ui/MainWindow.h"
 #include "ui/ModeSelectionDialog.h"
 #include "ui/SplashScreen.h"
@@ -45,6 +50,30 @@ void migrateLegacySchoolSettings()
 
 int main(int argc, char *argv[])
 {
+    // Diagnostic, no window: `E-Lab700.exe --list-cameras result.txt` writes
+    // what Windows/DirectShow reports for every camera (name, USB path, real
+    // supported resolutions) and exits. Read-only — never starts a stream.
+    if (argc >= 3 && QString::fromLocal8Bit(argv[1]) == QLatin1String("--list-cameras")) {
+        QFile out(QString::fromLocal8Bit(argv[2]));
+        if (!out.open(QFile::WriteOnly | QFile::Text))
+            return 1;
+        QTextStream stream(&out);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        stream.setEncoding(QStringConverter::Utf8);
+#else
+        stream.setCodec("UTF-8");
+#endif
+        const QVector<DirectShowDevice> devices = enumerateDirectShowDevices();
+        stream << "cameras: " << devices.size() << "\n";
+        for (const DirectShowDevice &device : devices) {
+            stream << "\n[" << device.index << "] " << device.name << "\n  path: " << device.devicePath << "\n  modes:";
+            for (const QSize &size : device.resolutions)
+                stream << ' ' << size.width() << 'x' << size.height();
+            stream << "\n";
+        }
+        return 0;
+    }
+
     QApplication app(argc, argv);
     QApplication::setOrganizationName(QStringLiteral("ELab700Community"));
     QApplication::setApplicationName(QStringLiteral("E-Lab 700"));

@@ -423,6 +423,10 @@ void MainWindow::startResolutionAutoTuning()
         return a.width() * a.height() > b.width() * b.height();
     });
     candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
+    // Each step reconfigures the camera; the real mode list can be long, so
+    // only the three largest are worth trying before settling.
+    if (candidates.size() > 3)
+        candidates.resize(3);
     m_resolutionProbeCandidates = candidates;
     m_resolutionProbeIndex = 0;
     probeNextResolution();
@@ -604,20 +608,6 @@ QIcon coloredDotIcon(const QColor &color)
     painter.drawEllipse(2, 2, 12, 12);
     return QIcon(pixmap);
 }
-
-// The microscope's native presets (640x480, 1280x960, 2592x1944) are all
-// 4:3; a laptop's own built-in webcam is typically 16:9 (e.g. 1280x720) or
-// some other non-4:3 shape. Used only to decide whether picking a device
-// from the connection menu should require the teacher PIN (see
-// onConnectionClicked) — a heuristic, not a hard filter, since the device
-// list itself still shows whatever was actually detected.
-bool looksLikeMicroscopeAspectRatio(const QSize &resolution)
-{
-    if (resolution.height() <= 0)
-        return false;
-    const double ratio = static_cast<double>(resolution.width()) / resolution.height();
-    return qAbs(ratio - 4.0 / 3.0) < 0.05;
-}
 }
 
 void MainWindow::onResolutionClicked()
@@ -628,11 +618,15 @@ void MainWindow::onResolutionClicked()
         return;
     }
 
-    const QVector<QSize> resolutions = backend->supportedResolutions();
+    QVector<QSize> resolutions = backend->supportedResolutions();
     if (resolutions.isEmpty())
         return;
 
+    // The mode the camera is actually streaming must always be listed (and
+    // shown green), even if the driver's own list didn't mention it.
     const QSize current = backend->currentResolution();
+    if (!current.isEmpty() && !resolutions.contains(current))
+        resolutions.prepend(current);
     QMenu menu(this);
     for (const QSize &size : resolutions) {
         const bool isCurrent = (size == current);
@@ -715,26 +709,27 @@ void MainWindow::onConnectionClicked()
             QAction *note = menu.addAction(tr("Aucune caméra ne ressemble au microscope — tout est affiché"));
             note->setEnabled(false);
         }
-        // "Nom du microscope" (Réglages) replaces the generic "Caméra USB"
-        // label when set, e.g. "OMAX Caméra" — same setting already used
-        // for the top-bar title, reused here instead of a second field.
+        // "Nom du microscope" (Réglages) replaces the driver's name for the
+        // camera identified as the microscope, e.g. "OMAX Caméra" — never
+        // for the other cameras, which keep their own real name.
         const QString microscopeName = m_settings.microscopeName().trimmed();
         for (const CameraDeviceInfo &device : devices) {
             const bool isCurrent = m_cameraManager.isConnected() && device.id == m_cameraManager.currentDeviceId();
-            const QString label = microscopeName.isEmpty()
-                ? device.displayName
-                : tr("%1 (%2x%3)").arg(microscopeName).arg(device.resolution.width()).arg(device.resolution.height());
+            const QString label = (device.likelyMicroscope && !microscopeName.isEmpty())
+                ? tr("%1 (%2x%3)").arg(microscopeName).arg(device.resolution.width()).arg(device.resolution.height())
+                : device.displayName;
             QAction *action = menu.addAction(coloredDotIcon(isCurrent ? QColor("#35e08a") : QColor("#ff5c6c")),
                                               label);
             action->setCheckable(true);
             action->setChecked(isCurrent);
-            const bool needsPin = !looksLikeMicroscopeAspectRatio(device.resolution)
+            const bool needsPin = !device.likelyMicroscope
                 && m_settings.featurePinLockEnabled() && !m_settings.teacherPinHash().isEmpty();
             connect(action, &QAction::triggered, this, [this, device, needsPin]() {
-                // Devices that don't have the microscope's 4:3 shape are most
-                // likely a laptop's own built-in webcam — gate those behind
-                // the teacher PIN so a student can't switch away from the
-                // microscope to it (accidentally or otherwise) from this menu.
+                // Any camera not identified as the microscope (see
+                // CameraManager::classifyDevices — by driver name, else by
+                // shape) is most likely the laptop's own webcam: gate it
+                // behind the teacher PIN so a student can't switch away
+                // from the microscope to it from this menu.
                 if (needsPin && !confirmTeacherPin())
                     return;
                 if (!m_cameraManager.forceConnect(device.id)) {

@@ -14,6 +14,11 @@ struct CameraDeviceInfo {
     QString displayName; // human readable name shown in the teacher panel
     QString model;       // e.g. "SCMOS05000KPA"
     QSize resolution;     // negotiated resolution at enumeration time, for the manual device picker
+    QString deviceName;   // the driver's own friendly name (DirectShow), empty if unknown
+    // Set by CameraManager after each scan: true for the camera that is
+    // (most probably) the microscope — by name when any device's name
+    // identifies it, otherwise by the 4:3 shape of its image.
+    bool likelyMicroscope = false;
 };
 
 struct CameraFrame {
