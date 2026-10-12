@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QObject>
 #include <QString>
+#include <QVariant>
 #include <QStringList>
 #include <QVector>
 
@@ -95,6 +96,12 @@ public:
     // Empty = not set, callers fall back to a generic label.
     QString microscopeName() const;
     void setMicroscopeName(const QString &name);
+
+    // Exposure/gain the teacher left in the panel, remembered per camera (by
+    // its driver name) so the next launch starts as it was left. Invalid
+    // QVariant = never adjusted.
+    QVariant cameraAdjustment(const QString &camera, const QString &name) const;
+    void setCameraAdjustment(const QString &camera, const QString &name, const QVariant &value);
 
     // Photo file format: "png" (default, lossless), "jpg", or "tiff"
     // (lab-friendly). Getter whitelists the value since it becomes a file

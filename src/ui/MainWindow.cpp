@@ -70,49 +70,6 @@ QImage applyMonochrome(const QImage &image, bool enabled)
     return image.convertToFormat(QImage::Format_Grayscale8);
 }
 
-// A rough, qualitative sharpness aid for the on-screen focus indicator, not
-// a scientific measurement — downsamples first (see comment below) then
-// scores a simple Laplacian variance, scaled heuristically into 0-100.
-double computeSharpnessScore(const QImage &image)
-{
-    if (image.isNull())
-        return 0.0;
-
-    const QImage small = image.scaledToWidth(160, Qt::FastTransformation)
-                              .convertToFormat(QImage::Format_Grayscale8);
-    const int w = small.width();
-    const int h = small.height();
-    if (w < 3 || h < 3)
-        return 0.0;
-
-    double sum = 0.0;
-    double sumSq = 0.0;
-    int count = 0;
-    for (int y = 1; y < h - 1; ++y) {
-        const uchar *row = small.constScanLine(y);
-        const uchar *rowUp = small.constScanLine(y - 1);
-        const uchar *rowDown = small.constScanLine(y + 1);
-        for (int x = 1; x < w - 1; ++x) {
-            const int lap = 4 * row[x] - row[x - 1] - row[x + 1] - rowUp[x] - rowDown[x];
-            sum += lap;
-            sumSq += static_cast<double>(lap) * lap;
-            ++count;
-        }
-    }
-    if (count == 0)
-        return 0.0;
-
-    const double mean = sum / count;
-    const double variance = (sumSq / count) - (mean * mean);
-    // The multiplier (raw Laplacian variance is naturally small) was
-    // originally tuned against typical low-magnification views; high-power
-    // objectives tend to fill the frame with smoother, lower-contrast
-    // detail even in sharp focus, which under-scored as "blurry" on the
-    // same scale. Bumped up so genuinely sharp frames read as sharp across
-    // objectives — this stays a rough visual aid, not a precise measurement.
-    return qBound(0.0, std::sqrt(qMax(0.0, variance)) * 4.0, 100.0);
-}
-
 QString sanitizeForFileName(const QString &name)
 {
     QString result = name.trimmed();
@@ -250,9 +207,7 @@ MainWindow::MainWindow(QWidget *parent)
         // noise makes the raw score visibly jump/flicker every frame
         // otherwise, which reads as the whole display "jittering".
         if (m_settings.showFocusIndicator()) {
-            const double rawScore = computeSharpnessScore(processed.image);
-            m_smoothedFocusScore = 0.25 * rawScore + 0.75 * m_smoothedFocusScore;
-            m_videoView->setFocusScore(m_smoothedFocusScore);
+            m_videoView->setFocusScore(m_sharpness.update(processed.image));
         }
     });
     connect(backend, &CameraBackend::fpsUpdated, m_topBar, &TopStatusBar::setFps);
@@ -523,11 +478,31 @@ void MainWindow::onTeacherModeRequested()
     if (m_settings.featurePinLockEnabled() && !m_settings.teacherPinHash().isEmpty() && !confirmTeacherPin())
         return;
 
-    TeacherPanel panel(&m_settings, m_cameraManager.backend(),
+    CameraBackend *panelBackend = m_cameraManager.backend();
+    const bool hadCamera = panelBackend->isOpen();
+    const bool autoBefore = hadCamera && panelBackend->autoExposure();
+    const int exposureBefore = hadCamera ? panelBackend->exposure() : 0;
+    const int gainBefore = hadCamera ? panelBackend->gain() : 0;
+
+    TeacherPanel panel(&m_settings, panelBackend,
                         [this]() { return m_videoView->currentFrame(); }, this);
     connect(&panel, &TeacherPanel::labTimerStartRequested, this, &MainWindow::startLabTimer);
     connect(&panel, &TeacherPanel::labTimerStopRequested, this, &MainWindow::stopLabTimer);
     panel.exec();
+
+    // Whatever exposure/gain the teacher left is remembered for this camera
+    // and re-applied the next time it connects (see onCameraConnected).
+    if (hadCamera && panelBackend->isOpen()) {
+        const bool autoAfter = panelBackend->autoExposure();
+        const int exposureAfter = panelBackend->exposure();
+        const int gainAfter = panelBackend->gain();
+        if (autoAfter != autoBefore || exposureAfter != exposureBefore || gainAfter != gainBefore) {
+            m_settings.setCameraAdjustment(m_currentCameraKey, QStringLiteral("autoExposure"), autoAfter);
+            if (!autoAfter)
+                m_settings.setCameraAdjustment(m_currentCameraKey, QStringLiteral("exposure"), exposureAfter);
+            m_settings.setCameraAdjustment(m_currentCameraKey, QStringLiteral("gain"), gainAfter);
+        }
+    }
 
     // Resolution or capture folder may have changed while the panel was open.
     m_topBar->setResolution(m_cameraManager.backend()->currentResolution());
@@ -536,7 +511,22 @@ void MainWindow::onTeacherModeRequested()
 
 void MainWindow::onCameraConnected(const CameraDeviceInfo &info)
 {
+    m_sharpness.reset();
     CameraBackend *backend = m_cameraManager.backend();
+    m_currentCameraKey = info.deviceName;
+
+    // Start as the teacher left this camera last time (exposure mode/value,
+    // gain); a camera never adjusted keeps the driver's defaults.
+    const QVariant savedAuto = m_settings.cameraAdjustment(m_currentCameraKey, QStringLiteral("autoExposure"));
+    const QVariant savedExposure = m_settings.cameraAdjustment(m_currentCameraKey, QStringLiteral("exposure"));
+    const QVariant savedGain = m_settings.cameraAdjustment(m_currentCameraKey, QStringLiteral("gain"));
+    if (savedAuto.isValid() && savedAuto.toBool())
+        backend->setAutoExposure(true);
+    else if (savedExposure.isValid())
+        backend->setExposure(savedExposure.toInt());
+    if (savedGain.isValid())
+        backend->setGain(savedGain.toInt());
+
     m_topBar->setConnected(true, info.model);
     m_topBar->setResolution(backend->currentResolution());
     m_videoView->setCameraConnected(true);
@@ -576,6 +566,7 @@ void MainWindow::onCameraConnected(const CameraDeviceInfo &info)
 
 void MainWindow::onCameraDisconnected()
 {
+    m_sharpness.reset();
     m_topBar->setConnected(false);
     m_videoView->setCameraConnected(false);
     m_microscopeInfoPanel->setConnected(false);

@@ -542,3 +542,24 @@ void AppSettings::setActiveGroup(const QString &className, const QString &groupN
     QDir().mkpath(folder);
     emit activeCaptureFolderChanged(folder);
 }
+
+namespace {
+QString cameraAdjustmentKey(const QString &camera, const QString &name)
+{
+    QString safe = camera.isEmpty() ? QStringLiteral("default") : camera;
+    safe.replace(QLatin1Char('/'), QLatin1Char('_')).replace(QLatin1Char('\\'), QLatin1Char('_'));
+    return QStringLiteral("cameraAdjust/%1/%2").arg(safe, name);
+}
+}
+
+QVariant AppSettings::cameraAdjustment(const QString &camera, const QString &name) const
+{
+    QSettings settings;
+    return settings.value(cameraAdjustmentKey(camera, name));
+}
+
+void AppSettings::setCameraAdjustment(const QString &camera, const QString &name, const QVariant &value)
+{
+    QSettings settings;
+    settings.setValue(cameraAdjustmentKey(camera, name), value);
+}

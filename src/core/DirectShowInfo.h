@@ -19,3 +19,42 @@ struct DirectShowDevice {
 // but never starts a stream, so it does not light up or disturb the camera.
 // Safe to call from any thread (initializes COM for the calling thread).
 QVector<DirectShowDevice> enumerateDirectShowDevices();
+
+enum class DsControl { Exposure, Gain, Brightness, WhiteBalance };
+
+struct DsControlRange {
+    bool available = false;
+    long min = 0;
+    long max = 0;
+    long step = 1;
+    long defaultValue = 0;
+    bool autoSupported = false;
+};
+
+// The camera's real sliders (exposure, gain, brightness, white balance) with
+// the real units and limits the driver reports — OpenCV's generic 0-100
+// guesses are wrong for most cameras (exposure is typically log2 seconds,
+// e.g. -13..-1). Bound to one camera by its OpenCV index; use from the GUI
+// thread only (holds a COM object). Windows only; elsewhere isValid() is
+// always false and every call fails harmlessly.
+class DirectShowControls {
+public:
+    explicit DirectShowControls(int cameraIndex);
+    ~DirectShowControls();
+    DirectShowControls(const DirectShowControls &) = delete;
+    DirectShowControls &operator=(const DirectShowControls &) = delete;
+
+    bool isValid() const;
+    DsControlRange range(DsControl control) const;
+
+    // Current raw value and whether the driver is driving it automatically.
+    bool read(DsControl control, long &value, bool &isAuto) const;
+    // Switches that control to manual and sets the raw value.
+    bool writeManual(DsControl control, long value);
+    // Hands that control back to the camera's own automatic mode.
+    bool writeAuto(DsControl control);
+
+private:
+    struct Impl;
+    Impl *d;
+};

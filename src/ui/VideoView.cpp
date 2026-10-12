@@ -175,11 +175,12 @@ void VideoView::drawGrid(QPainter &painter, const QRect &imageRect) const
 
 void VideoView::drawFocusIndicator(QPainter &painter) const
 {
-    // A rough sharpness indicator (see MainWindow's computeSharpnessScore),
-    // not a scientific autofocus measurement — just a rough aid for
-    // students turning the focus knob.
-    const QColor color = m_focusScore >= 66.0 ? QColor("#35e08a")
-                        : m_focusScore >= 33.0 ? QColor("#e0c235")
+    // The score is relative to the best focus seen recently (see
+    // SharpnessMeter): green = about as sharp as it has been, so the same
+    // thresholds work for every objective. A focus aid for students turning
+    // the knob, not a measurement.
+    const QColor color = m_focusScore >= 80.0 ? QColor("#35e08a")
+                        : m_focusScore >= 50.0 ? QColor("#e0c235")
                                                 : QColor("#ff5c6c");
     const QRect badgeRect(16, 16, 160, 28);
     painter.setPen(Qt::NoPen);

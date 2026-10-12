@@ -1,14 +1,20 @@
 #pragma once
 
+#include <atomic>
+#include <memory>
+
 #include <QElapsedTimer>
+#include <QMutex>
 #include <QScopedPointer>
-#include <QTimer>
 
 #include "CameraBackend.h"
 
 namespace cv {
 class VideoCapture;
 }
+
+class DirectShowControls;
+class QThread;
 
 // Real camera backend using OpenCV's platform capture API: DirectShow on
 // Windows (cv::CAP_DSHOW), AVFoundation on macOS (cv::CAP_AVFOUNDATION) —
@@ -63,10 +69,14 @@ public:
     bool setGain(int value0to100) override;
     int gain() const override;
 
-private slots:
-    void captureFrame();
-
 private:
+    // The camera's real exposure/gain controls (see DirectShowControls),
+    // bound lazily on first use and dropped on close(); null when the
+    // platform/driver doesn't offer them, in which case the OpenCV property
+    // guesses are used instead.
+    DirectShowControls *realControls() const;
+    void applyDefaultGain();
+
     // Shared by open() and setResolution(): creates and configures a fresh
     // cv::VideoCapture at the given index/size, replacing m_capture on
     // success. Reopening (rather than calling set() on an already-streaming
@@ -75,25 +85,39 @@ private:
     // FRAME_WIDTH/HEIGHT change instead.
     bool openCaptureAt(int index, const QSize &size);
 
-    QScopedPointer<cv::VideoCapture> m_capture;
-    QTimer m_captureTimer;
-    QElapsedTimer m_fpsClock;
-    int m_frameCountSinceFpsUpdate = 0;
-    int m_openIndex = -1;
+    // Frames are read on a dedicated thread (captureLoop): a blocking
+    // cv::VideoCapture::read() on the GUI thread used to freeze the whole
+    // interface for up to a frame interval, every frame. The GUI thread only
+    // ever receives the newest finished frame (deliverLatestFrame), so a slow
+    // UI drops frames instead of building up a backlog.
+    void startWorker();
+    void stopWorker();
+    void captureLoop(int generation);
+    void deliverLatestFrame();
+    void onStreamLost(int generation);
 
-    // A UVC driver commonly drops a handful of reads while it renegotiates
-    // the stream right after a resolution change (see setResolution()) —
-    // that's normal settling, not a real disconnect. Only declare the stream
-    // actually lost after it stays silent for a sustained stretch, tracked
-    // by wall-clock time rather than a frame count so it scales with
-    // whatever fps the current resolution allows.
-    QElapsedTimer m_lastGoodFrameClock;
+    QScopedPointer<cv::VideoCapture> m_capture;
+    // Held by the worker for the duration of each read, and by the GUI thread
+    // around every direct use of m_capture (property get/set), since
+    // cv::VideoCapture is not thread-safe.
+    mutable QMutex m_captureMutex;
+    int m_openIndex = -1;
+    mutable std::unique_ptr<DirectShowControls> m_realControls;
+
+    QThread *m_thread = nullptr;
+    std::atomic<bool> m_stopRequested{false};
+    int m_generation = 0; // GUI thread only; ignores stale events from a previous worker
+
+    QMutex m_frameMutex;
+    CameraFrame m_latestFrame;
+    bool m_deliveryPending = false;
 
     // One-shot software white balance: the platform AUTO_WB property is
     // unreliable across drivers, so "Auto" instead measures the next
     // captured frame's per-channel averages (point the camera at a blank/
     // bright area when clicking Auto) and applies fixed correction gains to
     // every frame after that, until recalibrated.
+    QMutex m_wbMutex;
     bool m_wbCalibrationRequested = false;
     double m_wbGainB = 1.0;
     double m_wbGainG = 1.0;

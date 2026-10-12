@@ -3,6 +3,7 @@
 #include <QIcon>
 #include <QSettings>
 #include <QTextStream>
+#include <QTimer>
 #include <QTranslator>
 #include <QtGlobal>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -70,9 +71,41 @@ int main(int argc, char *argv[])
             for (const QSize &size : device.resolutions)
                 stream << ' ' << size.width() << 'x' << size.height();
             stream << "\n";
+
+            DirectShowControls controls(device.index);
+            const struct {
+                DsControl control;
+                const char *label;
+            } kControls[] = {{DsControl::Exposure, "exposure"}, {DsControl::Gain, "gain"},
+                             {DsControl::Brightness, "brightness"}, {DsControl::WhiteBalance, "whiteBalance"}};
+            for (const auto &entry : kControls) {
+                const DsControlRange range = controls.range(entry.control);
+                stream << "  " << entry.label << ": ";
+                if (!range.available) {
+                    stream << "not available\n";
+                    continue;
+                }
+                long value = 0;
+                bool isAuto = false;
+                controls.read(entry.control, value, isAuto);
+                stream << range.min << ".." << range.max << " step " << range.step << " default "
+                       << range.defaultValue << " now " << value << (isAuto ? " (auto)" : " (manual)")
+                       << (range.autoSupported ? ", auto supported" : "") << "\n";
+            }
         }
         return 0;
     }
+
+    // Visual check without showing anything on a real screen: `--grab out.png`
+    // runs the whole app on Qt's offscreen platform, saves a picture of the
+    // main window a few seconds after start-up and exits.
+    QString grabPath;
+    for (int i = 1; i + 1 < argc; ++i) {
+        if (QString::fromLocal8Bit(argv[i]) == QLatin1String("--grab"))
+            grabPath = QString::fromLocal8Bit(argv[i + 1]);
+    }
+    if (!grabPath.isEmpty())
+        qputenv("QT_QPA_PLATFORM", "offscreen");
 
     QApplication app(argc, argv);
     QApplication::setOrganizationName(QStringLiteral("ELab700Community"));
@@ -122,6 +155,13 @@ int main(int argc, char *argv[])
     app.processEvents();
 
     splash.playIntro();
+
+    if (!grabPath.isEmpty()) {
+        QTimer::singleShot(5000, &window, [&window, &app, grabPath]() {
+            window.grab().save(grabPath);
+            app.quit();
+        });
+    }
 
     return app.exec();
 }

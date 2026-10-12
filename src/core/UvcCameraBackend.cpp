@@ -8,12 +8,15 @@
 #include <QImage>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QThread>
 
 #include "DirectShowInfo.h"
 
 namespace {
 constexpr int kMaxProbedIndex = 8;
-constexpr int kCaptureIntervalMs = 33; // ~30 fps target
+// Never poll the camera faster than this (a backend that returns instantly
+// with a repeated frame would otherwise spin a CPU core).
+constexpr int kMinFrameIntervalMs = 8;
 
 // What DirectShow said about each camera at the last scan. Filled on the
 // probing worker thread, read on the UI thread when the resolution menu
@@ -21,6 +24,16 @@ constexpr int kCaptureIntervalMs = 33; // ~30 fps target
 // the slowest driver takes to answer.
 QMutex g_dsCacheMutex;
 QVector<DirectShowDevice> g_dsCache;
+
+QString nameForIndex(int index)
+{
+    QMutexLocker lock(&g_dsCacheMutex);
+    for (const DirectShowDevice &device : g_dsCache) {
+        if (device.index == index)
+            return device.name;
+    }
+    return {};
+}
 
 QVector<QSize> modesForIndex(int index)
 {
@@ -53,7 +66,8 @@ constexpr int kCaptureBackend = cv::CAP_ANY;
 
 UvcCameraBackend::UvcCameraBackend(QObject *parent) : CameraBackend(parent)
 {
-    connect(&m_captureTimer, &QTimer::timeout, this, &UvcCameraBackend::captureFrame);
+    // Frames cross from the capture thread to the GUI thread by queued call.
+    qRegisterMetaType<CameraFrame>("CameraFrame");
 }
 
 UvcCameraBackend::~UvcCameraBackend()
@@ -148,23 +162,9 @@ bool UvcCameraBackend::openCaptureAt(int index, const QSize &size)
     capture->set(cv::CAP_PROP_FRAME_WIDTH, size.width());
     capture->set(cv::CAP_PROP_FRAME_HEIGHT, size.height());
 
-    // The driver's own default gain is 0, which renders as a near-black
-    // image until someone manually raises it in the teacher panel — 35
-    // gives a properly usable picture out of the box. Still adjustable via
-    // setGain() afterwards.
-    capture->set(cv::CAP_PROP_GAIN, 35);
-
-    // Deliberately NOT touching auto-exposure/auto-WB here. This backend
-    // previously forced them off at connect time to fight image flicker,
-    // but CAP_PROP_AUTO_EXPOSURE's manual-vs-auto convention (which numeric
-    // value means what) is driver-specific and guessing it wrong is worse
-    // than doing nothing: on this camera it left auto-exposure actually
-    // still running, silently overriding the teacher panel's manual
-    // exposure slider and producing a stuck, overexposed image with no way
-    // to correct it. The teacher panel's own "Exposition automatique" /
-    // "Balance des blancs automatique" checkboxes (setAutoExposure(),
-    // setAutoWhiteBalance()) are the reliable way to control this — the
-    // camera simply starts up in whatever mode it defaults to.
+    // Deliberately not touching auto-exposure/auto-WB here: the camera
+    // starts in whatever mode it had, and the teacher panel's checkboxes
+    // (setAutoExposure(), setAutoWhiteBalance()) switch it explicitly.
     m_capture.reset(capture.take());
     m_openIndex = index;
     return true;
@@ -187,14 +187,14 @@ bool UvcCameraBackend::open(const QString &deviceId)
     if (!openCaptureAt(index, QSize(1280, 960)))
         return false;
 
-    m_frameCountSinceFpsUpdate = 0;
-    m_fpsClock.start();
-    m_lastGoodFrameClock.start();
-    m_captureTimer.start(kCaptureIntervalMs);
+    applyDefaultGain();
+    startWorker();
 
     CameraDeviceInfo info;
     info.id = deviceId;
     info.displayName = tr("Caméra USB");
+    info.deviceName = nameForIndex(index);
+    info.model = info.deviceName;
     emit deviceConnected(info);
     return true;
 }
@@ -204,9 +204,13 @@ void UvcCameraBackend::close()
     if (!isOpen())
         return;
 
-    m_captureTimer.stop();
-    m_capture->release();
-    m_capture.reset();
+    stopWorker();
+    {
+        QMutexLocker lock(&m_captureMutex);
+        m_capture->release();
+        m_capture.reset();
+    }
+    m_realControls.reset();
     m_openIndex = -1;
     emit deviceDisconnected();
 }
@@ -216,66 +220,153 @@ bool UvcCameraBackend::isOpen() const
     return m_capture && m_capture->isOpened();
 }
 
-void UvcCameraBackend::captureFrame()
+void UvcCameraBackend::startWorker()
 {
-    if (!isOpen())
+    stopWorker();
+    m_stopRequested = false;
+    const int generation = ++m_generation;
+    {
+        QMutexLocker lock(&m_frameMutex);
+        m_deliveryPending = false;
+        m_latestFrame = CameraFrame();
+    }
+    m_thread = QThread::create([this, generation]() { captureLoop(generation); });
+    m_thread->start();
+}
+
+void UvcCameraBackend::stopWorker()
+{
+    if (!m_thread)
         return;
+    m_stopRequested = true;
+    m_thread->wait();
+    delete m_thread;
+    m_thread = nullptr;
+}
 
-    cv::Mat frame;
-    if (!m_capture->read(frame) || frame.empty()) {
-        // Tolerate transient read failures (e.g. the driver renegotiating
-        // the stream right after setResolution()) instead of treating the
-        // very first miss as a fatal disconnect.
-        constexpr qint64 kStreamLostThresholdMs = 2500;
-        if (m_lastGoodFrameClock.isValid() && m_lastGoodFrameClock.elapsed() < kStreamLostThresholdMs)
-            return;
-        emit errorOccurred(tr("Perte du flux caméra."));
-        close();
+void UvcCameraBackend::captureLoop(int generation)
+{
+    // Wall-clock trouble tolerance: a UVC driver commonly drops a handful of
+    // reads while it renegotiates the stream - normal settling, not a real
+    // disconnect. Only declare the stream lost after it stays silent for a
+    // sustained stretch (by time, so it scales with whatever fps there is).
+    constexpr qint64 kStreamLostThresholdMs = 2500;
+
+    QElapsedTimer sessionClock;
+    sessionClock.start();
+    QElapsedTimer fpsClock;
+    fpsClock.start();
+    QElapsedTimer lastGoodFrame;
+    lastGoodFrame.start();
+    QElapsedTimer pace;
+    int framesSinceFpsUpdate = 0;
+
+    while (!m_stopRequested) {
+        pace.restart();
+
+        cv::Mat frame;
+        bool gotFrame = false;
+        {
+            QMutexLocker lock(&m_captureMutex);
+            if (!m_capture || !m_capture->isOpened())
+                return;
+            gotFrame = m_capture->read(frame) && !frame.empty();
+        }
+
+        if (!gotFrame) {
+            if (lastGoodFrame.elapsed() >= kStreamLostThresholdMs) {
+                QMetaObject::invokeMethod(this, [this, generation]() { onStreamLost(generation); },
+                                          Qt::QueuedConnection);
+                return;
+            }
+            QThread::msleep(5);
+            continue;
+        }
+        lastGoodFrame.restart();
+
+        double gainB = 1.0, gainG = 1.0, gainR = 1.0;
+        {
+            QMutexLocker lock(&m_wbMutex);
+            if (m_wbCalibrationRequested) {
+                m_wbCalibrationRequested = false;
+                const cv::Scalar avg = cv::mean(frame); // BGR order
+                const double gray = (avg[0] + avg[1] + avg[2]) / 3.0;
+                auto safeGain = [gray](double channelAvg) {
+                    return channelAvg < 1.0 ? 1.0 : qBound(0.3, gray / channelAvg, 3.0);
+                };
+                m_wbGainB = safeGain(avg[0]);
+                m_wbGainG = safeGain(avg[1]);
+                m_wbGainR = safeGain(avg[2]);
+            }
+            gainB = m_wbGainB;
+            gainG = m_wbGainG;
+            gainR = m_wbGainR;
+        }
+
+        if (gainB != 1.0 || gainG != 1.0 || gainR != 1.0) {
+            std::vector<cv::Mat> channels;
+            cv::split(frame, channels);
+            channels[0].convertTo(channels[0], -1, gainB, 0);
+            channels[1].convertTo(channels[1], -1, gainG, 0);
+            channels[2].convertTo(channels[2], -1, gainR, 0);
+            cv::merge(channels, frame);
+        }
+
+        cv::Mat rgb;
+        cv::cvtColor(frame, rgb, cv::COLOR_BGR2RGB);
+
+        CameraFrame result;
+        result.image = QImage(rgb.data, rgb.cols, rgb.rows, static_cast<int>(rgb.step), QImage::Format_RGB888).copy();
+        result.timestampMs = static_cast<quint64>(sessionClock.elapsed());
+
+        bool needsDelivery = false;
+        {
+            QMutexLocker lock(&m_frameMutex);
+            m_latestFrame = result;
+            needsDelivery = !m_deliveryPending;
+            m_deliveryPending = true;
+        }
+        if (needsDelivery)
+            QMetaObject::invokeMethod(this, [this]() { deliverLatestFrame(); }, Qt::QueuedConnection);
+
+        ++framesSinceFpsUpdate;
+        if (fpsClock.elapsed() >= 1000) {
+            emit fpsUpdated(framesSinceFpsUpdate * 1000.0 / fpsClock.elapsed());
+            framesSinceFpsUpdate = 0;
+            fpsClock.restart();
+        }
+
+        const qint64 spent = pace.elapsed();
+        if (spent < kMinFrameIntervalMs)
+            QThread::msleep(static_cast<unsigned long>(kMinFrameIntervalMs - spent));
+    }
+}
+
+void UvcCameraBackend::deliverLatestFrame()
+{
+    CameraFrame frame;
+    {
+        QMutexLocker lock(&m_frameMutex);
+        frame = m_latestFrame;
+        m_deliveryPending = false;
+    }
+    if (isOpen() && !frame.image.isNull())
+        emit frameReady(frame);
+}
+
+void UvcCameraBackend::onStreamLost(int generation)
+{
+    if (generation != m_generation || !isOpen())
         return;
-    }
-    m_lastGoodFrameClock.restart();
-
-    if (m_wbCalibrationRequested) {
-        m_wbCalibrationRequested = false;
-        const cv::Scalar avg = cv::mean(frame); // BGR order
-        const double gray = (avg[0] + avg[1] + avg[2]) / 3.0;
-        auto safeGain = [gray](double channelAvg) {
-            return channelAvg < 1.0 ? 1.0 : qBound(0.3, gray / channelAvg, 3.0);
-        };
-        m_wbGainB = safeGain(avg[0]);
-        m_wbGainG = safeGain(avg[1]);
-        m_wbGainR = safeGain(avg[2]);
-    }
-
-    if (m_wbGainB != 1.0 || m_wbGainG != 1.0 || m_wbGainR != 1.0) {
-        std::vector<cv::Mat> channels;
-        cv::split(frame, channels);
-        channels[0].convertTo(channels[0], -1, m_wbGainB, 0);
-        channels[1].convertTo(channels[1], -1, m_wbGainG, 0);
-        channels[2].convertTo(channels[2], -1, m_wbGainR, 0);
-        cv::merge(channels, frame);
-    }
-
-    cv::Mat rgb;
-    cv::cvtColor(frame, rgb, cv::COLOR_BGR2RGB);
-
-    CameraFrame result;
-    result.image = QImage(rgb.data, rgb.cols, rgb.rows, static_cast<int>(rgb.step), QImage::Format_RGB888).copy();
-    result.timestampMs = static_cast<quint64>(m_fpsClock.elapsed());
-    emit frameReady(result);
-
-    ++m_frameCountSinceFpsUpdate;
-    if (m_fpsClock.elapsed() >= 1000) {
-        emit fpsUpdated(m_frameCountSinceFpsUpdate * 1000.0 / m_fpsClock.elapsed());
-        m_frameCountSinceFpsUpdate = 0;
-        m_fpsClock.restart();
-    }
+    emit errorOccurred(tr("Perte du flux caméra."));
+    close();
 }
 
 QSize UvcCameraBackend::currentResolution() const
 {
     if (!isOpen())
         return {};
+    QMutexLocker lock(&m_captureMutex);
     return QSize(static_cast<int>(m_capture->get(cv::CAP_PROP_FRAME_WIDTH)),
                  static_cast<int>(m_capture->get(cv::CAP_PROP_FRAME_HEIGHT)));
 }
@@ -320,19 +411,22 @@ bool UvcCameraBackend::setResolution(const QSize &size)
     // microscope. Explicitly releasing first — so the device is actually
     // free before reopening it at the new size — is the fix; the physical
     // device index itself (m_openIndex) is unaffected by that release.
-    m_captureTimer.stop();
+    stopWorker();
     const int index = m_openIndex;
-    m_capture->release();
-    m_capture.reset();
+    {
+        QMutexLocker lock(&m_captureMutex);
+        m_capture->release();
+        m_capture.reset();
+    }
 
     if (!openCaptureAt(index, size)) {
+        m_realControls.reset();
         m_openIndex = -1;
         emit deviceDisconnected();
         return false;
     }
 
-    m_lastGoodFrameClock.start();
-    m_captureTimer.start(kCaptureIntervalMs);
+    startWorker();
     return true;
 }
 
@@ -341,8 +435,12 @@ bool UvcCameraBackend::setAutoWhiteBalance(bool enabled)
     if (!isOpen())
         return false;
 
-    m_capture->set(cv::CAP_PROP_AUTO_WB, enabled ? 1 : 0); // best-effort, driver-dependent
+    {
+        QMutexLocker lock(&m_captureMutex);
+        m_capture->set(cv::CAP_PROP_AUTO_WB, enabled ? 1 : 0); // best-effort, driver-dependent
+    }
 
+    QMutexLocker wbLock(&m_wbMutex);
     if (enabled) {
         // Calibrate from the next captured frame: point the camera at a
         // blank/bright area when clicking Auto for a correct reference.
@@ -357,16 +455,87 @@ bool UvcCameraBackend::autoWhiteBalance() const
 {
     if (!isOpen())
         return false;
+    QMutexLocker lock(&m_captureMutex);
     return m_capture->get(cv::CAP_PROP_AUTO_WB) != 0;
+}
+
+DirectShowControls *UvcCameraBackend::realControls() const
+{
+    if (!isOpen())
+        return nullptr;
+    if (!m_realControls)
+        m_realControls.reset(new DirectShowControls(m_openIndex));
+    return m_realControls->isValid() ? m_realControls.get() : nullptr;
+}
+
+namespace {
+// The UI speaks 0-100; the driver speaks its own units (exposure is usually
+// log2 seconds like -10..-4, gain 1..8, ...). Linear in the driver's units.
+int rawToPercent(const DsControlRange &range, long raw)
+{
+    const double fraction = static_cast<double>(raw - range.min) / static_cast<double>(range.max - range.min);
+    return qBound(0, qRound(fraction * 100.0), 100);
+}
+
+long percentToRaw(const DsControlRange &range, int percent)
+{
+    const double raw = range.min + (range.max - range.min) * qBound(0, percent, 100) / 100.0;
+    const long snapped = range.min + qRound((raw - range.min) / range.step) * range.step;
+    return qBound(range.min, snapped, range.max);
+}
+
+// Real range of a control if the driver exposes it, else an empty one.
+DsControlRange usableRange(DirectShowControls *controls, DsControl control)
+{
+    return controls ? controls->range(control) : DsControlRange();
+}
+}
+
+void UvcCameraBackend::applyDefaultGain()
+{
+    // The driver's own default gain is often the minimum, which renders as a
+    // near-black image until someone raises it in the teacher panel. 35
+    // gives a properly usable picture out of the box on the OMAX — as a raw
+    // value when the camera's real range contains it, otherwise 35% of the
+    // range (a webcam's gain only goes 1..8, where raw 35 would just mean
+    // "maximum"). Done once per connection, not on every reconfiguration, so
+    // a gain the teacher chose is never silently reset.
+    const DsControlRange range = usableRange(realControls(), DsControl::Gain);
+    if (range.available) {
+        long current = range.defaultValue;
+        bool isAuto = false;
+        realControls()->read(DsControl::Gain, current, isAuto);
+        if (current <= range.min) {
+            const long target = (35 >= range.min && 35 <= range.max)
+                ? 35 : range.min + qRound((range.max - range.min) * 0.35);
+            realControls()->writeManual(DsControl::Gain, target);
+        }
+        return;
+    }
+    QMutexLocker lock(&m_captureMutex);
+    m_capture->set(cv::CAP_PROP_GAIN, 35);
 }
 
 bool UvcCameraBackend::setAutoExposure(bool enabled)
 {
     if (!isOpen())
         return false;
-    // The auto-exposure convention here is famously inverted and
-    // driver-dependent (commonly 0.75 = auto, 0.25 = manual); adjust here
-    // if a given camera's behaviour is reversed.
+
+    DirectShowControls *controls = realControls();
+    const DsControlRange range = usableRange(controls, DsControl::Exposure);
+    if (range.available && range.autoSupported) {
+        if (enabled)
+            return controls->writeAuto(DsControl::Exposure);
+        // Leaving auto: freeze at whatever exposure the camera had settled on
+        // instead of jumping to some arbitrary value.
+        long value = range.defaultValue;
+        bool isAuto = false;
+        controls->read(DsControl::Exposure, value, isAuto);
+        return controls->writeManual(DsControl::Exposure, value);
+    }
+    // Fallback (OpenCV's DirectShow convention, confirmed on real hardware:
+    // 0.75 = auto, 0.25 = manual).
+    QMutexLocker lock(&m_captureMutex);
     return m_capture->set(cv::CAP_PROP_AUTO_EXPOSURE, enabled ? 0.75 : 0.25);
 }
 
@@ -374,6 +543,15 @@ bool UvcCameraBackend::autoExposure() const
 {
     if (!isOpen())
         return false;
+
+    DirectShowControls *controls = realControls();
+    if (usableRange(controls, DsControl::Exposure).available) {
+        long value = 0;
+        bool isAuto = false;
+        if (controls->read(DsControl::Exposure, value, isAuto))
+            return isAuto;
+    }
+    QMutexLocker lock(&m_captureMutex);
     return m_capture->get(cv::CAP_PROP_AUTO_EXPOSURE) >= 0.5;
 }
 
@@ -381,6 +559,12 @@ bool UvcCameraBackend::setExposure(int value0to100)
 {
     if (!isOpen())
         return false;
+
+    DirectShowControls *controls = realControls();
+    const DsControlRange range = usableRange(controls, DsControl::Exposure);
+    if (range.available)
+        return controls->writeManual(DsControl::Exposure, percentToRaw(range, value0to100));
+    QMutexLocker lock(&m_captureMutex);
     return m_capture->set(cv::CAP_PROP_EXPOSURE, value0to100);
 }
 
@@ -388,6 +572,16 @@ int UvcCameraBackend::exposure() const
 {
     if (!isOpen())
         return 0;
+
+    DirectShowControls *controls = realControls();
+    const DsControlRange range = usableRange(controls, DsControl::Exposure);
+    if (range.available) {
+        long value = 0;
+        bool isAuto = false;
+        if (controls->read(DsControl::Exposure, value, isAuto))
+            return rawToPercent(range, value);
+    }
+    QMutexLocker lock(&m_captureMutex);
     return qBound(0, static_cast<int>(m_capture->get(cv::CAP_PROP_EXPOSURE)), 100);
 }
 
@@ -395,6 +589,12 @@ bool UvcCameraBackend::setGain(int value0to100)
 {
     if (!isOpen())
         return false;
+
+    DirectShowControls *controls = realControls();
+    const DsControlRange range = usableRange(controls, DsControl::Gain);
+    if (range.available)
+        return controls->writeManual(DsControl::Gain, percentToRaw(range, value0to100));
+    QMutexLocker lock(&m_captureMutex);
     return m_capture->set(cv::CAP_PROP_GAIN, value0to100);
 }
 
@@ -402,5 +602,15 @@ int UvcCameraBackend::gain() const
 {
     if (!isOpen())
         return 0;
+
+    DirectShowControls *controls = realControls();
+    const DsControlRange range = usableRange(controls, DsControl::Gain);
+    if (range.available) {
+        long value = 0;
+        bool isAuto = false;
+        if (controls->read(DsControl::Gain, value, isAuto))
+            return rawToPercent(range, value);
+    }
+    QMutexLocker lock(&m_captureMutex);
     return qBound(0, static_cast<int>(m_capture->get(cv::CAP_PROP_GAIN)), 100);
 }

@@ -113,6 +113,11 @@ BottomBar::BottomBar(QWidget *parent) : QWidget(parent)
     layout->addWidget(zoomContainer, 0, 0, Qt::AlignLeft | Qt::AlignVCenter);
     layout->addWidget(buttonsContainer, 0, 1, Qt::AlignCenter);
     layout->addWidget(learningAidsContainer, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
+    // Both side columns must start from the same width, or the wider one
+    // pushes the main buttons off-center even with equal stretch.
+    const int sideWidth = qMax(zoomContainer->sizeHint().width(), learningAidsContainer->sizeHint().width());
+    layout->setColumnMinimumWidth(0, sideWidth);
+    layout->setColumnMinimumWidth(2, sideWidth);
 
     connect(m_photoButton, &QPushButton::clicked, this, &BottomBar::photoRequested);
     connect(m_videoButton, &QPushButton::clicked, this, &BottomBar::videoToggleRequested);

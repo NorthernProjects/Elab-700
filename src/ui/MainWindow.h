@@ -10,6 +10,7 @@
 #include "core/CameraManager.h"
 #include "core/CaptureManager.h"
 #include "core/GalleryModel.h"
+#include "core/SharpnessMeter.h"
 
 class BottomBar;
 class IdleScreen;
@@ -84,7 +85,10 @@ private:
     // camera select). Only ever run it once per app session; later
     // reconnects just keep whatever resolution the camera opens with.
     bool m_autoTuningDoneOnce = false;
-    double m_smoothedFocusScore = 0.0;
+    SharpnessMeter m_sharpness;
+    // Driver name of the connected camera: the key its saved exposure/gain
+    // adjustments are stored under (see AppSettings::cameraAdjustment).
+    QString m_currentCameraKey;
     double m_lastReportedFps = 0.0;
     QVector<QSize> m_resolutionProbeCandidates;
     int m_resolutionProbeIndex = 0;

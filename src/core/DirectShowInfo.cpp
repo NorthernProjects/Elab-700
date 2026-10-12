@@ -162,11 +162,159 @@ QVector<DirectShowDevice> enumerateDirectShowDevices()
     return devices;
 }
 
+struct DirectShowControls::Impl {
+    ComScope com;
+    IBaseFilter *filter = nullptr;
+    IAMCameraControl *camera = nullptr;
+    IAMVideoProcAmp *procAmp = nullptr;
+    DsControlRange ranges[4];
+};
+
+namespace {
+bool isCameraControl(DsControl c) { return c == DsControl::Exposure; }
+
+long cameraProperty(DsControl) { return CameraControl_Exposure; }
+
+long procAmpProperty(DsControl c)
+{
+    switch (c) {
+    case DsControl::Gain: return VideoProcAmp_Gain;
+    case DsControl::Brightness: return VideoProcAmp_Brightness;
+    default: return VideoProcAmp_WhiteBalance;
+    }
+}
+}
+
+DirectShowControls::DirectShowControls(int cameraIndex) : d(new Impl)
+{
+    ICreateDevEnum *deviceEnum = nullptr;
+    if (FAILED(CoCreateInstance(CLSID_SystemDeviceEnum, nullptr, CLSCTX_INPROC_SERVER,
+                                IID_ICreateDevEnum, reinterpret_cast<void **>(&deviceEnum))) || !deviceEnum)
+        return;
+
+    IEnumMoniker *monikers = nullptr;
+    if (deviceEnum->CreateClassEnumerator(CLSID_VideoInputDeviceCategory, &monikers, 0) == S_OK && monikers) {
+        IMoniker *moniker = nullptr;
+        int index = 0;
+        while (monikers->Next(1, &moniker, nullptr) == S_OK) {
+            if (index++ == cameraIndex) {
+                moniker->BindToObject(nullptr, nullptr, IID_IBaseFilter, reinterpret_cast<void **>(&d->filter));
+                moniker->Release();
+                break;
+            }
+            moniker->Release();
+        }
+        monikers->Release();
+    }
+    deviceEnum->Release();
+    if (!d->filter)
+        return;
+
+    d->filter->QueryInterface(IID_IAMCameraControl, reinterpret_cast<void **>(&d->camera));
+    d->filter->QueryInterface(IID_IAMVideoProcAmp, reinterpret_cast<void **>(&d->procAmp));
+
+    for (const DsControl control : {DsControl::Exposure, DsControl::Gain, DsControl::Brightness, DsControl::WhiteBalance}) {
+        long min = 0, max = 0, step = 1, def = 0, caps = 0;
+        HRESULT hr = E_FAIL;
+        bool hasAuto = false;
+        if (isCameraControl(control) && d->camera) {
+            hr = d->camera->GetRange(cameraProperty(control), &min, &max, &step, &def, &caps);
+            hasAuto = (caps & CameraControl_Flags_Auto) != 0;
+        } else if (!isCameraControl(control) && d->procAmp) {
+            hr = d->procAmp->GetRange(procAmpProperty(control), &min, &max, &step, &def, &caps);
+            hasAuto = (caps & VideoProcAmp_Flags_Auto) != 0;
+        }
+        DsControlRange &range = d->ranges[static_cast<int>(control)];
+        if (SUCCEEDED(hr) && max > min) {
+            range.available = true;
+            range.min = min;
+            range.max = max;
+            range.step = step > 0 ? step : 1;
+            range.defaultValue = def;
+            range.autoSupported = hasAuto;
+        }
+    }
+}
+
+DirectShowControls::~DirectShowControls()
+{
+    if (d->camera)
+        d->camera->Release();
+    if (d->procAmp)
+        d->procAmp->Release();
+    if (d->filter)
+        d->filter->Release();
+    delete d;
+}
+
+bool DirectShowControls::isValid() const
+{
+    return d->filter && (d->camera || d->procAmp);
+}
+
+DsControlRange DirectShowControls::range(DsControl control) const
+{
+    return d->ranges[static_cast<int>(control)];
+}
+
+bool DirectShowControls::read(DsControl control, long &value, bool &isAuto) const
+{
+    if (!range(control).available)
+        return false;
+    long flags = 0;
+    HRESULT hr = E_FAIL;
+    if (isCameraControl(control) && d->camera) {
+        hr = d->camera->Get(cameraProperty(control), &value, &flags);
+        isAuto = (flags & CameraControl_Flags_Auto) != 0;
+    } else if (!isCameraControl(control) && d->procAmp) {
+        hr = d->procAmp->Get(procAmpProperty(control), &value, &flags);
+        isAuto = (flags & VideoProcAmp_Flags_Auto) != 0;
+    }
+    return SUCCEEDED(hr);
+}
+
+bool DirectShowControls::writeManual(DsControl control, long value)
+{
+    const DsControlRange r = range(control);
+    if (!r.available)
+        return false;
+    value = std::max(r.min, std::min(r.max, value));
+    if (isCameraControl(control) && d->camera)
+        return SUCCEEDED(d->camera->Set(cameraProperty(control), value, CameraControl_Flags_Manual));
+    if (!isCameraControl(control) && d->procAmp)
+        return SUCCEEDED(d->procAmp->Set(procAmpProperty(control), value, VideoProcAmp_Flags_Manual));
+    return false;
+}
+
+bool DirectShowControls::writeAuto(DsControl control)
+{
+    const DsControlRange r = range(control);
+    if (!r.available || !r.autoSupported)
+        return false;
+    long value = r.defaultValue;
+    bool isAuto = false;
+    read(control, value, isAuto);
+    if (isCameraControl(control) && d->camera)
+        return SUCCEEDED(d->camera->Set(cameraProperty(control), value, CameraControl_Flags_Auto));
+    if (!isCameraControl(control) && d->procAmp)
+        return SUCCEEDED(d->procAmp->Set(procAmpProperty(control), value, VideoProcAmp_Flags_Auto));
+    return false;
+}
+
 #else
 
 QVector<DirectShowDevice> enumerateDirectShowDevices()
 {
     return {};
 }
+
+struct DirectShowControls::Impl {};
+DirectShowControls::DirectShowControls(int) : d(new Impl) {}
+DirectShowControls::~DirectShowControls() { delete d; }
+bool DirectShowControls::isValid() const { return false; }
+DsControlRange DirectShowControls::range(DsControl) const { return {}; }
+bool DirectShowControls::read(DsControl, long &, bool &) const { return false; }
+bool DirectShowControls::writeManual(DsControl, long) { return false; }
+bool DirectShowControls::writeAuto(DsControl) { return false; }
 
 #endif
