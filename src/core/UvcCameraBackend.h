@@ -5,6 +5,7 @@
 
 #include <QElapsedTimer>
 #include <QMutex>
+#include <QSemaphore>
 #include <QScopedPointer>
 
 #include "CameraBackend.h"
@@ -56,6 +57,7 @@ public:
     bool open(const QString &deviceId) override;
     void close() override;
     bool isOpen() const override;
+    bool isOpening() const override { return m_opening; }
 
     QSize currentResolution() const override;
     QVector<QSize> supportedResolutions() const override;
@@ -81,36 +83,42 @@ private:
     DirectShowControls *realControls() const;
     void applyDefaultGain();
 
-    // Shared by open() and setResolution(): creates and configures a fresh
-    // cv::VideoCapture at the given index/size, replacing m_capture on
-    // success. Reopening (rather than calling set() on an already-streaming
-    // capture) is what actually gets a DirectShow driver to renegotiate the
-    // frame size reliably — many drivers silently ignore a mid-stream
-    // FRAME_WIDTH/HEIGHT change instead.
-    bool openCaptureAt(int index, const QSize &size);
-
-    // Frames are read on a dedicated thread (captureLoop): a blocking
-    // cv::VideoCapture::read() on the GUI thread used to freeze the whole
-    // interface for up to a frame interval, every frame. The GUI thread only
-    // ever receives the newest finished frame (deliverLatestFrame), so a slow
-    // UI drops frames instead of building up a backlog.
-    void startWorker();
+    // The capture thread does everything with the camera: it opens it,
+    // reads frames, and finally destroys it — DirectShow/COM objects must
+    // live and die on one thread, and doing the ~1 s open there keeps the
+    // GUI responsive. The GUI thread only ever receives the newest finished
+    // frame (deliverLatestFrame), so a slow UI drops frames instead of
+    // building up a backlog.
+    //
+    // async = true returns at once; the outcome arrives as deviceConnected()
+    // or openFailed(). async = false waits for the open attempt to finish
+    // and returns its outcome (used for resolution changes, whose callers
+    // read the new resolution right afterwards).
+    bool startCapture(int index, const QString &deviceId, const QSize &size, bool async);
     void stopWorker();
-    void captureLoop(int generation);
+    void captureLoop(int generation, int index, QString deviceId, QSize size, bool async);
     void deliverLatestFrame();
+    void onOpened(int generation, const QString &deviceId, int index);
+    void onOpenFailed(int generation, const QString &deviceId);
     void onStreamLost(int generation);
 
-    QScopedPointer<cv::VideoCapture> m_capture;
-    // Held by the worker for the duration of each read, and by the GUI thread
-    // around every direct use of m_capture (property get/set), since
-    // cv::VideoCapture is not thread-safe.
+    // Created, used and destroyed by the capture thread only; the mutex
+    // serializes that thread's reads against the GUI thread's property
+    // get/set calls (cv::VideoCapture is not thread-safe). May be null.
+    std::unique_ptr<cv::VideoCapture> m_capture;
     mutable QMutex m_captureMutex;
     int m_openIndex = -1;
+    QString m_openDeviceId;
     mutable std::unique_ptr<DirectShowControls> m_realControls;
 
     QThread *m_thread = nullptr;
     std::atomic<bool> m_stopRequested{false};
-    int m_generation = 0; // GUI thread only; ignores stale events from a previous worker
+    std::atomic<bool> m_opened{false};  // camera is open and streaming
+    std::atomic<bool> m_opening{false}; // open attempt in progress
+    QSemaphore m_openAttemptDone;       // released when an open attempt finished
+    bool m_syncOpenResult = false;      // outcome handed to a synchronous waiter
+    bool m_announcedConnected = false;  // deviceConnected() was emitted (GUI thread only)
+    int m_generation = 0; // GUI thread only; ignores stale events from a previous thread
 
     QMutex m_frameMutex;
     CameraFrame m_latestFrame;

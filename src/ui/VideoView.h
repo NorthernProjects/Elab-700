@@ -21,6 +21,8 @@ public:
 public slots:
     void setFrame(const QImage &image);
     void setCameraConnected(bool connected);
+    // Shows "connecting..." instead of "no camera" while a camera is opening.
+    void setConnecting(bool connecting);
 
     // Distinguishes "deliberately turned off" (see TopStatusBar's power
     // button) from "not connected" — same empty video area either way, but
@@ -54,6 +56,7 @@ private:
 
     QImage m_currentFrame;
     bool m_cameraConnected = false;
+    bool m_connecting = false;
     bool m_poweredOff = false;
     bool m_lightTheme = false;
     bool m_immersive = false;

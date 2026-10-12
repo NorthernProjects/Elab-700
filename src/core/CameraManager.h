@@ -61,6 +61,9 @@ signals:
     void connected(const CameraDeviceInfo &info);
     void disconnected();
     void poweredOnChanged(bool on);
+    // A connection attempt started (opening a camera takes ~1 s) / failed.
+    void connecting();
+    void connectFailed(const QString &deviceId);
 
 private slots:
     void onProbeFinished();

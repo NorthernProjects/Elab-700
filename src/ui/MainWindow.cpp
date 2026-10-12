@@ -189,6 +189,14 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&m_cameraManager, &CameraManager::connected, this, &MainWindow::onCameraConnected);
     connect(&m_cameraManager, &CameraManager::disconnected, this, &MainWindow::onCameraDisconnected);
     connect(&m_cameraManager, &CameraManager::poweredOnChanged, m_topBar, &TopStatusBar::setCameraPoweredIndicator);
+    connect(&m_cameraManager, &CameraManager::connecting, this, [this]() { m_videoView->setConnecting(true); });
+    connect(&m_cameraManager, &CameraManager::connected, this, [this]() { m_videoView->setConnecting(false); });
+    connect(&m_cameraManager, &CameraManager::disconnected, this, [this]() { m_videoView->setConnecting(false); });
+    connect(&m_cameraManager, &CameraManager::connectFailed, this, [this]() {
+        m_videoView->setConnecting(false);
+        statusBar()->showMessage(
+            tr("Impossible d'ouvrir la caméra (elle est peut-être utilisée par un autre programme)."), 6000);
+    });
     connect(&m_cameraManager, &CameraManager::poweredOnChanged, this, [this](bool on) {
         m_videoView->setCameraPoweredOff(!on);
     });

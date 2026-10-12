@@ -1127,8 +1127,8 @@ Stop</translation>
     <name>MainWindow</name>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="149"/>
-        <location filename="../src/ui/MainWindow.cpp" line="475"/>
-        <location filename="../src/ui/MainWindow.cpp" line="482"/>
+        <location filename="../src/ui/MainWindow.cpp" line="483"/>
+        <location filename="../src/ui/MainWindow.cpp" line="490"/>
         <source>Mode professeur</source>
         <translation>Teacher mode</translation>
     </message>
@@ -1138,102 +1138,107 @@ Stop</translation>
         <translation>Advanced settings</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="245"/>
+        <location filename="../src/ui/MainWindow.cpp" line="198"/>
+        <source>Impossible d&apos;ouvrir la caméra (elle est peut-être utilisée par un autre programme).</source>
+        <translation>Could not open the camera (it may be in use by another program).</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="253"/>
         <source>Microscope : %1
 </source>
         <translation>Microscope: %1
 </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="249"/>
+        <location filename="../src/ui/MainWindow.cpp" line="257"/>
         <source>Résolution capteur : %1 x %2
 </source>
         <translation>Sensor resolution: %1 x %2
 </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="250"/>
+        <location filename="../src/ui/MainWindow.cpp" line="258"/>
         <source>Exposition : %1
 </source>
         <translation>Exposure: %1
 </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="251"/>
+        <location filename="../src/ui/MainWindow.cpp" line="259"/>
         <source>Gain : %1
 </source>
         <translation>Gain: %1
 </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="253"/>
+        <location filename="../src/ui/MainWindow.cpp" line="261"/>
         <source>Étalonnage échelle : %1 µm / 100 px
 </source>
         <translation>Scale calibration: %1 µm / 100 px
 </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="297"/>
+        <location filename="../src/ui/MainWindow.cpp" line="305"/>
         <source>Photo enregistrée : %1</source>
         <translation>Photo saved: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="307"/>
+        <location filename="../src/ui/MainWindow.cpp" line="315"/>
         <source>Vidéo enregistrée : %1</source>
         <translation>Video saved: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="339"/>
+        <location filename="../src/ui/MainWindow.cpp" line="347"/>
         <source>Exposition et balance des blancs réglées automatiquement</source>
         <translation>Exposure and white balance set automatically</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="365"/>
+        <location filename="../src/ui/MainWindow.cpp" line="373"/>
         <source>Se connecter</source>
         <translation>Log in</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="366"/>
+        <location filename="../src/ui/MainWindow.cpp" line="374"/>
         <source>Aucune classe n&apos;est configurée. Demande à ton enseignant d&apos;ouvrir le mode professeur et &quot;Gérer les classes et groupes...&quot;.</source>
         <translation>No class is configured. Ask your teacher to open teacher mode and “Manage classes and groups...”.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="434"/>
+        <location filename="../src/ui/MainWindow.cpp" line="442"/>
         <source>Résolution optimisée automatiquement : %1 x %2 (%3 ips)</source>
         <translation>Resolution automatically optimized: %1 x %2 (%3 fps)</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="476"/>
+        <location filename="../src/ui/MainWindow.cpp" line="484"/>
         <source>Code PIN professeur :</source>
         <translation>Teacher PIN code:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="482"/>
+        <location filename="../src/ui/MainWindow.cpp" line="490"/>
         <source>Code PIN incorrect.</source>
         <translation>Incorrect PIN code.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="639"/>
+        <location filename="../src/ui/MainWindow.cpp" line="647"/>
         <source>Aucune caméra connectée.</source>
         <translation>No camera connected.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="673"/>
+        <location filename="../src/ui/MainWindow.cpp" line="681"/>
         <source>Résolution : %1 x %2</source>
         <translation>Resolution: %1 x %2</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="679"/>
+        <location filename="../src/ui/MainWindow.cpp" line="687"/>
         <source>La caméra n&apos;a pas accepté cette résolution (reste à %1 x %2).</source>
         <translation>The camera did not accept this resolution (staying at %1 x %2).</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="711"/>
+        <location filename="../src/ui/MainWindow.cpp" line="719"/>
         <source>Caméra allumée (cliquer pour éteindre)</source>
         <translation>Camera on (click to turn off)</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="712"/>
+        <location filename="../src/ui/MainWindow.cpp" line="720"/>
         <source>Caméra éteinte (cliquer pour allumer)</source>
         <translation>Camera off (click to turn on)</translation>
     </message>
@@ -1246,73 +1251,73 @@ Stop</translation>
         <translation type="vanished">Camera off</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="719"/>
+        <location filename="../src/ui/MainWindow.cpp" line="727"/>
         <source>Déconnecter la caméra</source>
         <translation>Disconnect the camera</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="722"/>
+        <location filename="../src/ui/MainWindow.cpp" line="730"/>
         <source>Caméra déconnectée.</source>
         <translation>Camera disconnected.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="728"/>
+        <location filename="../src/ui/MainWindow.cpp" line="736"/>
         <source>Aucune caméra détectée</source>
         <translation>No camera detected</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="732"/>
+        <location filename="../src/ui/MainWindow.cpp" line="740"/>
         <source>Aucune caméra ne ressemble au microscope — tout est affiché</source>
         <translation>No camera looks like the microscope — showing everything</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="742"/>
+        <location filename="../src/ui/MainWindow.cpp" line="750"/>
         <source>%1 (%2x%3)</source>
         <translation>%1 (%2x%3)</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="760"/>
+        <location filename="../src/ui/MainWindow.cpp" line="768"/>
         <source>Impossible de se connecter à %1.</source>
         <translation>Could not connect to %1.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="791"/>
+        <location filename="../src/ui/MainWindow.cpp" line="799"/>
         <source>Renommer la photo</source>
         <translation>Rename photo</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="792"/>
+        <location filename="../src/ui/MainWindow.cpp" line="800"/>
         <source>Nom du fichier :</source>
         <translation>File name:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="802"/>
-        <location filename="../src/ui/MainWindow.cpp" line="809"/>
+        <location filename="../src/ui/MainWindow.cpp" line="810"/>
+        <location filename="../src/ui/MainWindow.cpp" line="817"/>
         <source>Renommer</source>
         <translation>Rename</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="802"/>
+        <location filename="../src/ui/MainWindow.cpp" line="810"/>
         <source>Un fichier porte déjà ce nom.</source>
         <translation>A file with this name already exists.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="809"/>
+        <location filename="../src/ui/MainWindow.cpp" line="817"/>
         <source>Impossible de renommer le fichier.</source>
         <translation>Could not rename the file.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="919"/>
+        <location filename="../src/ui/MainWindow.cpp" line="927"/>
         <source>E-Lab700_Sauvegarde_%1</source>
         <translation>E-Lab700_Backup_%1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="923"/>
+        <location filename="../src/ui/MainWindow.cpp" line="931"/>
         <source>Sauvegarde automatique effectuée.</source>
         <translation>Automatic backup completed.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="935"/>
+        <location filename="../src/ui/MainWindow.cpp" line="943"/>
         <source>Minuteur terminé !</source>
         <translation>Timer finished!</translation>
     </message>
@@ -2362,33 +2367,33 @@ Choose a PIN code (4 digits minimum):</translation>
 <context>
     <name>UvcCameraBackend</name>
     <message>
-        <location filename="../src/core/UvcCameraBackend.cpp" line="82"/>
+        <location filename="../src/core/UvcCameraBackend.cpp" line="83"/>
         <source>Caméra USB (DirectShow)</source>
         <translation>USB camera (DirectShow)</translation>
     </message>
     <message>
-        <location filename="../src/core/UvcCameraBackend.cpp" line="84"/>
+        <location filename="../src/core/UvcCameraBackend.cpp" line="85"/>
         <source>Caméra USB (AVFoundation)</source>
         <translation>USB camera (AVFoundation)</translation>
     </message>
     <message>
-        <location filename="../src/core/UvcCameraBackend.cpp" line="86"/>
-        <location filename="../src/core/UvcCameraBackend.cpp" line="202"/>
+        <location filename="../src/core/UvcCameraBackend.cpp" line="87"/>
+        <location filename="../src/core/UvcCameraBackend.cpp" line="394"/>
         <source>Caméra USB</source>
         <translation>USB camera</translation>
     </message>
     <message>
-        <location filename="../src/core/UvcCameraBackend.cpp" line="135"/>
+        <location filename="../src/core/UvcCameraBackend.cpp" line="136"/>
         <source>Caméra USB (%1x%2)</source>
         <translation>USB camera (%1x%2)</translation>
     </message>
     <message>
-        <location filename="../src/core/UvcCameraBackend.cpp" line="155"/>
+        <location filename="../src/core/UvcCameraBackend.cpp" line="156"/>
         <source>%1 (%2x%3)</source>
         <translation>%1 (%2x%3)</translation>
     </message>
     <message>
-        <location filename="../src/core/UvcCameraBackend.cpp" line="368"/>
+        <location filename="../src/core/UvcCameraBackend.cpp" line="413"/>
         <source>Perte du flux caméra.</source>
         <translation>Camera stream lost.</translation>
     </message>
@@ -2396,36 +2401,41 @@ Choose a PIN code (4 digits minimum):</translation>
 <context>
     <name>VideoView</name>
     <message>
-        <location filename="../src/ui/VideoView.cpp" line="121"/>
+        <location filename="../src/ui/VideoView.cpp" line="129"/>
         <source>⏻  Caméra éteinte
 Rallumez-la avec le bouton d&apos;alimentation</source>
         <translation>⏻  Camera off
 Turn it back on with the power button</translation>
     </message>
     <message>
-        <location filename="../src/ui/VideoView.cpp" line="122"/>
+        <location filename="../src/ui/VideoView.cpp" line="130"/>
+        <source>Connexion à la caméra…</source>
+        <translation>Connecting to the camera…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/VideoView.cpp" line="131"/>
         <source>📷  Aucune caméra détectée
 Branchez la caméra du microscope</source>
         <translation>📷  No camera detected
 Connect the microscope&apos;s camera</translation>
     </message>
     <message>
-        <location filename="../src/ui/VideoView.cpp" line="204"/>
+        <location filename="../src/ui/VideoView.cpp" line="213"/>
         <source>Netteté</source>
         <translation>Sharpness</translation>
     </message>
     <message>
-        <location filename="../src/ui/VideoView.cpp" line="226"/>
+        <location filename="../src/ui/VideoView.cpp" line="235"/>
         <source>● Grille</source>
         <translation>● Grid</translation>
     </message>
     <message>
-        <location filename="../src/ui/VideoView.cpp" line="282"/>
+        <location filename="../src/ui/VideoView.cpp" line="291"/>
         <source>%1 mm</source>
         <translation>%1 mm</translation>
     </message>
     <message>
-        <location filename="../src/ui/VideoView.cpp" line="283"/>
+        <location filename="../src/ui/VideoView.cpp" line="292"/>
         <source>%1 µm</source>
         <translation>%1 µm</translation>
     </message>

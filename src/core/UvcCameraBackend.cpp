@@ -8,6 +8,7 @@
 #include <QImage>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QScopeGuard>
 #include <QThread>
 
 #include "DirectShowInfo.h"
@@ -160,26 +161,9 @@ QVector<CameraDeviceInfo> UvcCameraBackend::probeDevices()
     return devices;
 }
 
-bool UvcCameraBackend::openCaptureAt(int index, const QSize &size)
-{
-    auto capture = QScopedPointer<cv::VideoCapture>(new cv::VideoCapture(index, kCaptureBackend));
-    if (!capture->isOpened())
-        return false;
-
-    capture->set(cv::CAP_PROP_FRAME_WIDTH, size.width());
-    capture->set(cv::CAP_PROP_FRAME_HEIGHT, size.height());
-
-    // Deliberately not touching auto-exposure/auto-WB here: the camera
-    // starts in whatever mode it had, and the teacher panel's checkboxes
-    // (setAutoExposure(), setAutoWhiteBalance()) switch it explicitly.
-    m_capture.reset(capture.take());
-    m_openIndex = index;
-    return true;
-}
-
 bool UvcCameraBackend::open(const QString &deviceId)
 {
-    if (isOpen())
+    if (isOpen() || m_opening)
         return false;
 
     bool ok = false;
@@ -191,73 +175,110 @@ bool UvcCameraBackend::open(const QString &deviceId)
     // the full-res stream only delivers ~2 fps over USB, too choppy for a
     // live student view. Same 4:3 aspect ratio, so no cropping/distortion.
     // Full resolution is still reachable via setResolution() (teacher panel).
-    if (!openCaptureAt(index, QSize(1280, 960)))
-        return false;
-
-    applyDefaultGain();
-    startWorker();
-
-    CameraDeviceInfo info;
-    info.id = deviceId;
-    info.displayName = tr("Caméra USB");
-    info.deviceName = nameForIndex(index);
-    info.model = info.deviceName;
-    emit deviceConnected(info);
-    return true;
+    return startCapture(index, deviceId, QSize(1280, 960), true);
 }
 
 void UvcCameraBackend::close()
 {
-    if (!isOpen())
-        return;
-
+    const bool wasAnnounced = m_announcedConnected;
     stopWorker();
-    {
-        QMutexLocker lock(&m_captureMutex);
-        m_capture->release();
-        m_capture.reset();
-    }
     m_realControls.reset();
     m_openIndex = -1;
-    emit deviceDisconnected();
+    m_announcedConnected = false;
+    if (wasAnnounced)
+        emit deviceDisconnected();
 }
 
 bool UvcCameraBackend::isOpen() const
 {
-    return m_capture && m_capture->isOpened();
+    return m_opened;
 }
 
-void UvcCameraBackend::startWorker()
+bool UvcCameraBackend::startCapture(int index, const QString &deviceId, const QSize &size, bool async)
 {
     stopWorker();
     m_stopRequested = false;
+    m_opened = false;
+    m_opening = true;
+    m_openIndex = index;
+    m_openDeviceId = deviceId;
+    m_syncOpenResult = false;
     const int generation = ++m_generation;
     {
         QMutexLocker lock(&m_frameMutex);
         m_deliveryPending = false;
         m_latestFrame = CameraFrame();
     }
-    m_thread = QThread::create([this, generation]() { captureLoop(generation); });
+    while (m_openAttemptDone.tryAcquire()) {
+    }
+
+    m_thread = QThread::create([this, generation, index, deviceId, size, async]() {
+        captureLoop(generation, index, deviceId, size, async);
+    });
     m_thread->start();
+
+    if (async)
+        return true;
+    m_openAttemptDone.tryAcquire(1, 20000);
+    return m_syncOpenResult;
 }
 
 void UvcCameraBackend::stopWorker()
 {
-    if (!m_thread)
-        return;
-    m_stopRequested = true;
-    m_thread->wait();
-    delete m_thread;
-    m_thread = nullptr;
+    // Anything the old thread queued for the GUI thread (opened, lost, ...)
+    // is stale from this point on.
+    ++m_generation;
+    if (m_thread) {
+        m_stopRequested = true;
+        m_thread->wait();
+        delete m_thread;
+        m_thread = nullptr;
+    }
+    m_opening = false;
+    m_opened = false;
 }
 
-void UvcCameraBackend::captureLoop(int generation)
+void UvcCameraBackend::captureLoop(int generation, int index, QString deviceId, QSize size, bool async)
 {
     // Wall-clock trouble tolerance: a UVC driver commonly drops a handful of
     // reads while it renegotiates the stream - normal settling, not a real
     // disconnect. Only declare the stream lost after it stays silent for a
     // sustained stretch (by time, so it scales with whatever fps there is).
     constexpr qint64 kStreamLostThresholdMs = 2500;
+
+    // Whatever happens below, the camera is destroyed here, on the thread
+    // that created it.
+    const auto teardown = qScopeGuard([this]() {
+        QMutexLocker lock(&m_captureMutex);
+        m_opened = false;
+        m_capture.reset();
+    });
+
+    // Deliberately not touching auto-exposure/auto-WB when opening: the
+    // camera starts in whatever mode it had, and the teacher panel's
+    // checkboxes (setAutoExposure(), setAutoWhiteBalance()) switch it.
+    std::unique_ptr<cv::VideoCapture> camera(new cv::VideoCapture(index, kCaptureBackend));
+    bool ok = camera->isOpened();
+    if (ok) {
+        camera->set(cv::CAP_PROP_FRAME_WIDTH, size.width());
+        camera->set(cv::CAP_PROP_FRAME_HEIGHT, size.height());
+        QMutexLocker lock(&m_captureMutex);
+        m_capture = std::move(camera);
+        m_opened = true;
+    }
+    m_opening = false;
+    m_syncOpenResult = ok;
+    if (async) {
+        QMetaObject::invokeMethod(this, [this, generation, deviceId, index, ok]() {
+            if (ok)
+                onOpened(generation, deviceId, index);
+            else
+                onOpenFailed(generation, deviceId);
+        }, Qt::QueuedConnection);
+    }
+    m_openAttemptDone.release();
+    if (!ok)
+        return;
 
     QElapsedTimer sessionClock;
     sessionClock.start();
@@ -361,9 +382,33 @@ void UvcCameraBackend::deliverLatestFrame()
         emit frameReady(frame);
 }
 
+void UvcCameraBackend::onOpened(int generation, const QString &deviceId, int index)
+{
+    if (generation != m_generation)
+        return; // closed or reopened since: stale
+    m_announcedConnected = true;
+    applyDefaultGain();
+
+    CameraDeviceInfo info;
+    info.id = deviceId;
+    info.displayName = tr("Caméra USB");
+    info.deviceName = nameForIndex(index);
+    info.model = info.deviceName;
+    emit deviceConnected(info);
+}
+
+void UvcCameraBackend::onOpenFailed(int generation, const QString &deviceId)
+{
+    if (generation != m_generation)
+        return;
+    stopWorker();
+    m_openIndex = -1;
+    emit openFailed(deviceId);
+}
+
 void UvcCameraBackend::onStreamLost(int generation)
 {
-    if (generation != m_generation || !isOpen())
+    if (generation != m_generation)
         return;
     emit errorOccurred(tr("Perte du flux caméra."));
     close();
@@ -374,6 +419,8 @@ QSize UvcCameraBackend::currentResolution() const
     if (!isOpen())
         return {};
     QMutexLocker lock(&m_captureMutex);
+    if (!m_capture)
+        return {};
     return QSize(static_cast<int>(m_capture->get(cv::CAP_PROP_FRAME_WIDTH)),
                  static_cast<int>(m_capture->get(cv::CAP_PROP_FRAME_HEIGHT)));
 }
@@ -405,35 +452,21 @@ bool UvcCameraBackend::setResolution(const QSize &size)
     if (!isOpen())
         return false;
 
-    // A plain property set on the already-open capture (tried here
-    // before, even with frame reads paused around it) does not get this
-    // driver to actually renegotiate the frame size — confirmed by testing,
-    // it just silently keeps streaming at whatever resolution it already
-    // had. Reopening the device is the only thing that actually works, but
-    // an earlier attempt at that had a real bug: it constructed the new
-    // cv::VideoCapture BEFORE releasing the old one. With the old handle
-    // still holding the device, opening "the same index" again raced
-    // DirectShow's enumeration and could silently hand back a DIFFERENT
-    // physical camera (the computer's own webcam) instead of the
-    // microscope. Explicitly releasing first — so the device is actually
-    // free before reopening it at the new size — is the fix; the physical
-    // device index itself (m_openIndex) is unaffected by that release.
-    stopWorker();
-    const int index = m_openIndex;
-    {
-        QMutexLocker lock(&m_captureMutex);
-        m_capture->release();
-        m_capture.reset();
-    }
-
-    if (!openCaptureAt(index, size)) {
+    // A plain property set on the already-open capture (tried here before,
+    // even with frame reads paused around it) does not get this driver to
+    // renegotiate the frame size - it keeps streaming at whatever it had.
+    // Reopening is the only thing that works, and the old camera must be
+    // fully released first (startCapture() joins the old capture thread,
+    // which destroys it): with the old handle still held, opening "the same
+    // index" raced DirectShow's enumeration and could hand back a DIFFERENT
+    // physical camera (the laptop's webcam).
+    if (!startCapture(m_openIndex, m_openDeviceId, size, false)) {
         m_realControls.reset();
         m_openIndex = -1;
+        m_announcedConnected = false;
         emit deviceDisconnected();
         return false;
     }
-
-    startWorker();
     return true;
 }
 
@@ -444,7 +477,8 @@ bool UvcCameraBackend::setAutoWhiteBalance(bool enabled)
 
     {
         QMutexLocker lock(&m_captureMutex);
-        m_capture->set(cv::CAP_PROP_AUTO_WB, enabled ? 1 : 0); // best-effort, driver-dependent
+        if (m_capture)
+            m_capture->set(cv::CAP_PROP_AUTO_WB, enabled ? 1 : 0); // best-effort, driver-dependent
     }
 
     QMutexLocker wbLock(&m_wbMutex);
@@ -463,6 +497,8 @@ bool UvcCameraBackend::autoWhiteBalance() const
     if (!isOpen())
         return false;
     QMutexLocker lock(&m_captureMutex);
+    if (!m_capture)
+        return {};
     return m_capture->get(cv::CAP_PROP_AUTO_WB) != 0;
 }
 
@@ -520,7 +556,8 @@ void UvcCameraBackend::applyDefaultGain()
         return;
     }
     QMutexLocker lock(&m_captureMutex);
-    m_capture->set(cv::CAP_PROP_GAIN, 35);
+    if (m_capture)
+        m_capture->set(cv::CAP_PROP_GAIN, 35);
 }
 
 bool UvcCameraBackend::setAutoExposure(bool enabled)
@@ -543,6 +580,8 @@ bool UvcCameraBackend::setAutoExposure(bool enabled)
     // Fallback (OpenCV's DirectShow convention, confirmed on real hardware:
     // 0.75 = auto, 0.25 = manual).
     QMutexLocker lock(&m_captureMutex);
+    if (!m_capture)
+        return {};
     return m_capture->set(cv::CAP_PROP_AUTO_EXPOSURE, enabled ? 0.75 : 0.25);
 }
 
@@ -559,6 +598,8 @@ bool UvcCameraBackend::autoExposure() const
             return isAuto;
     }
     QMutexLocker lock(&m_captureMutex);
+    if (!m_capture)
+        return {};
     return m_capture->get(cv::CAP_PROP_AUTO_EXPOSURE) >= 0.5;
 }
 
@@ -572,6 +613,8 @@ bool UvcCameraBackend::setExposure(int value0to100)
     if (range.available)
         return controls->writeManual(DsControl::Exposure, percentToRaw(range, value0to100));
     QMutexLocker lock(&m_captureMutex);
+    if (!m_capture)
+        return {};
     return m_capture->set(cv::CAP_PROP_EXPOSURE, value0to100);
 }
 
@@ -589,6 +632,8 @@ int UvcCameraBackend::exposure() const
             return rawToPercent(range, value);
     }
     QMutexLocker lock(&m_captureMutex);
+    if (!m_capture)
+        return {};
     return qBound(0, static_cast<int>(m_capture->get(cv::CAP_PROP_EXPOSURE)), 100);
 }
 
@@ -602,6 +647,8 @@ bool UvcCameraBackend::setGain(int value0to100)
     if (range.available)
         return controls->writeManual(DsControl::Gain, percentToRaw(range, value0to100));
     QMutexLocker lock(&m_captureMutex);
+    if (!m_capture)
+        return {};
     return m_capture->set(cv::CAP_PROP_GAIN, value0to100);
 }
 
@@ -619,5 +666,7 @@ int UvcCameraBackend::gain() const
             return rawToPercent(range, value);
     }
     QMutexLocker lock(&m_captureMutex);
+    if (!m_capture)
+        return {};
     return qBound(0, static_cast<int>(m_capture->get(cv::CAP_PROP_GAIN)), 100);
 }

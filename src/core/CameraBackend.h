@@ -30,6 +30,9 @@ public:
     virtual bool open(const QString &deviceId) = 0;
     virtual void close() = 0;
     virtual bool isOpen() const = 0;
+    // True while an asynchronous open() is still in progress (the outcome
+    // then arrives as deviceConnected() or openFailed()).
+    virtual bool isOpening() const { return false; }
 
     virtual QSize currentResolution() const = 0;
     virtual QVector<QSize> supportedResolutions() const = 0;
@@ -52,6 +55,7 @@ signals:
     void frameReady(const CameraFrame &frame);
     void deviceConnected(const CameraDeviceInfo &info);
     void deviceDisconnected();
+    void openFailed(const QString &deviceId);
     void errorOccurred(const QString &message);
     void fpsUpdated(double fps);
 };

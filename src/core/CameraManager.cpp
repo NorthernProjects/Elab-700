@@ -93,6 +93,7 @@ CameraManager::CameraManager(QObject *parent) : QObject(parent)
 
     connect(m_backend.data(), &CameraBackend::deviceConnected, this, &CameraManager::connected);
     connect(m_backend.data(), &CameraBackend::deviceDisconnected, this, &CameraManager::disconnected);
+    connect(m_backend.data(), &CameraBackend::openFailed, this, &CameraManager::connectFailed);
     // Any lost/switched connection deserves a fresh full probe right away.
     connect(m_backend.data(), &CameraBackend::deviceDisconnected, this, [this]() { m_forceProbe = true; });
 
@@ -133,7 +134,7 @@ void CameraManager::rescan()
     // every 2 seconds by the periodic rescan timer even while switched off
     // — not the real, hands-off "leave the camera alone" state a power
     // button should provide.
-    if (m_backend->isOpen() || m_probeInFlight || m_manuallyDisconnected)
+    if (m_backend->isOpen() || m_backend->isOpening() || m_probeInFlight || m_manuallyDisconnected)
         return;
 
     // Probing runs entirely on a worker thread so a slow/flaky driver never
@@ -206,7 +207,8 @@ void CameraManager::connectToBestCandidate()
 
     if (best) {
         m_currentDeviceId = best->id;
-        m_backend->open(best->id);
+        if (m_backend->open(best->id))
+            emit connecting();
     }
 }
 
@@ -217,6 +219,9 @@ bool CameraManager::forceConnect(const QString &deviceId)
         emit poweredOnChanged(true);
     }
 
+    if (m_backend->isOpening())
+        return false; // let the attempt in progress finish first
+
     if (m_backend->isOpen()) {
         if (m_currentDeviceId == deviceId)
             return true;
@@ -225,6 +230,7 @@ bool CameraManager::forceConnect(const QString &deviceId)
 
     if (m_backend->open(deviceId)) {
         m_currentDeviceId = deviceId;
+        emit connecting();
         return true;
     }
     return false;
@@ -232,7 +238,7 @@ bool CameraManager::forceConnect(const QString &deviceId)
 
 void CameraManager::disconnectCamera()
 {
-    if (!m_backend->isOpen())
+    if (!m_backend->isOpen() && !m_backend->isOpening())
         return;
     m_manuallyDisconnected = true;
     m_backend->close();
@@ -251,7 +257,7 @@ void CameraManager::setPoweredOn(bool on)
         // off. Set the flag and emit unconditionally; only close the backend
         // if there's actually something open to close.
         m_manuallyDisconnected = true;
-        if (m_backend->isOpen())
+        if (m_backend->isOpen() || m_backend->isOpening())
             m_backend->close();
         emit poweredOnChanged(false);
         return;
